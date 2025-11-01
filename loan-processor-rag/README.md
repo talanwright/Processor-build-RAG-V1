@@ -1,65 +1,191 @@
 # Loan Processor RAG System
 
+A smart loan document analysis system that automatically processes loan applications, identifies missing documents, and generates professional email responses.
+
+## Features
+
+- **Document Analysis**: Automatically processes PDFs, Word docs, and other loan documents
+- **Missing Document Detection**: Identifies what documentation is still needed
+- **Risk Assessment**: Calculates completeness and risk scores
+- **Email Generation**: Creates professional borrower communications
+- **Make.com Integration**: Ready for workflow automation
+- **RESTful API**: Easy integration with any system
+
 ## Quick Start
 
-### 1. Setup Virtual Environment
+### Local Development
+
 ```bash
+# Clone and setup
+git clone https://github.com/YOUR_USERNAME/loan-processor-rag.git
 cd loan-processor-rag
+
+# Create virtual environment
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
+
+# Start the server
+python3 simple_rag_api.py
 ```
 
-### 2. Start the System
+Server will be available at `http://localhost:8000`
+
+### API Documentation
+
+Visit `http://localhost:8000/docs` for interactive API documentation.
+
+## Core Endpoints
+
+### Health Check
+```
+GET /
+```
+
+### Upload Documents
+```
+POST /upload-documents
+Form Data:
+- loan_id: string
+- files: file(s)
+```
+
+### Analyze Loan
+```
+POST /analyze-loan
+{
+  "loan_id": "string",
+  "borrower_info": {
+    "name": "string",
+    "email": "string"
+  },
+  "loan_type": "conventional",
+  "documents": [...]
+}
+```
+
+### Generate Email
+```
+POST /generate-email?loan_id=string&borrower_name=string&template_type=string
+```
+
+## Sample Response
+
+```json
+{
+  "loan_id": "12345",
+  "analysis_complete": true,
+  "completeness_score": 0.6,
+  "missing_documents": [
+    {
+      "document_type": "bank_statement",
+      "description": "Bank Statement required for loan processing",
+      "urgency": "high"
+    }
+  ],
+  "suggested_actions": [
+    "Request missing documents: bank_statement, tax_return"
+  ],
+  "status": "pending_documents"
+}
+```
+
+## Deployment
+
+### Railway (Recommended)
+1. Push to GitHub
+2. Connect to Railway.app
+3. Auto-deploys with permanent HTTPS URL
+
+### Heroku
 ```bash
-python3 run.py
+heroku create your-app-name
+git push heroku main
 ```
 
-**API will be available at:** `http://localhost:8000`
-**Documentation:** `http://localhost:8000/docs`
-
-## Make.com Integration
-
-The RAG system is ready to connect to Make.com! See `MAKE_INTEGRATION_GUIDE.md` for detailed setup instructions.
-
-### Key Integration Points:
-
-**1. Upload Documents:** `POST /upload-documents`
-**2. Analyze Loan:** `POST /analyze-loan` (Main endpoint for Make.com)
-**3. Generate Email:** `POST /generate-email`
-
-### Example Make.com Flow:
-```
-Email with Loan Docs → Upload to RAG → Analyze → Generate Response Email → Send to Borrower
+### Docker
+```bash
+docker build -t loan-processor .
+docker run -p 8000:8000 loan-processor
 ```
 
-## What This System Does
+## Document Types Supported
 
-✅ **Document Processing** - Extracts text from PDFs, Word docs, and more
-✅ **Intelligence** - Identifies missing documents and red flags
-✅ **Knowledge Base** - Loan requirements, compliance rules, red flag patterns
-✅ **Analysis** - Calculates completeness and risk scores
-✅ **Email Generation** - Creates professional responses based on analysis
-✅ **Make.com Ready** - RESTful API designed for workflow automation
+- **Applications**: 1003 forms, loan applications
+- **Income**: Pay stubs, W-2s, tax returns
+- **Assets**: Bank statements, asset verification
+- **Employment**: Employment verification letters
+- **Property**: Appraisals, title reports
 
-## For Your Mac Hardware
+## Loan Types
 
-This system is optimized for your MacBook Air M3 (16GB RAM):
-- Uses smaller, efficient models
-- Local processing for security
-- Lightweight vector database
-- CPU-optimized inference
+- Conventional
+- FHA
+- VA
+- USDA
+
+## Integration Examples
+
+### Make.com Workflow
+```
+Email Trigger → Upload Docs → Analyze → Generate Response → Send Email
+```
+
+### Zapier Integration
+```
+Gmail → HTTP Request → Email Response
+```
+
+### Direct API Usage
+```python
+import requests
+
+# Analyze loan
+response = requests.post("https://your-app.railway.app/analyze-loan", json={
+    "loan_id": "test123",
+    "borrower_info": {"name": "John Doe", "email": "john@email.com"},
+    "loan_type": "conventional"
+})
+
+analysis = response.json()
+print(f"Missing docs: {analysis['missing_documents']}")
+```
 
 ## Security Features
 
-- All data processing stays local
-- No cloud APIs for sensitive documents
-- Encrypted document storage (when configured)
-- GLBA compliance monitoring
-- Audit logging capabilities
+- Document encryption support
+- API authentication ready
+- CORS configuration
+- Rate limiting compatible
 
-## Getting Help
+## Technology Stack
 
-- **API Docs:** `http://localhost:8000/docs`
-- **System Stats:** `http://localhost:8000/stats`
-- **Make.com Setup:** See `MAKE_INTEGRATION_GUIDE.md`
+- **Backend**: FastAPI (Python)
+- **Document Processing**: PyPDF2, python-docx
+- **API**: RESTful with automatic OpenAPI docs
+- **Deployment**: Railway, Heroku, Docker ready
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details.
+
+## Support
+
+For issues and questions:
+- Check the API docs at `/docs`
+- Review the deployment guide
+- Open an issue on GitHub
+
+---
+
+**Built for modern loan processing workflows** 🚀

@@ -5,7 +5,7 @@ Build an AI-powered loan processor that analyzes loan documents, identifies miss
 
 ## Architecture Components
 1. **Make.com** - Email automation and workflow orchestration
-2. **Local RAG System** - Document analysis and intelligence
+2. **Local RAG System** - Docucanment analysis and intelligence
 3. **AI Agent** - Email composition and response generation
 4. **Local Database** - Document tracking and compliance storage
 

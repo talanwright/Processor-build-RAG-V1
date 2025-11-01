@@ -454,3 +454,14 @@ Track these KPIs to measure success:
 5. **Scale up** with additional loan types and requirements
 
 Your automated loan processor is now ready to handle incoming applications 24/7! 🚀
+
+Make.com Scenario Flow:
+
+  1. Trigger: Loan application submitted
+  2. HTTP Module: Call Railway API to analyze loan
+    - URL: https://web-production-bbd3.up.railway.app/analyze-loan
+    - Gets back: missing documents, risk score, red flags
+  3. OpenAI Module: Use the analysis to generate a personalized email
+    - Feed it the analysis results
+    - Let OpenAI write a professional, context-aware email
+  4. Email Module: Send the AI-generated email to the borrower
