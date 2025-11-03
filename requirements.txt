@@ -2,4 +2,4 @@ fastapi
 uvicorn[standard]
 python-multipart
 pydantic
-python-magic
+python-magic-bin
