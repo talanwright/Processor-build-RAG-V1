@@ -19,6 +19,7 @@ import hashlib
 from collections import defaultdict
 import time
 import filetype
+import re
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -140,13 +141,44 @@ def check_rate_limit(request: Request):
     # Add current request
     rate_limit_store[client_ip].append(current_time)
 
+def redact_sensitive_data(text: str) -> str:
+    """Redact sensitive data (SSNs, account numbers, etc.) from logs"""
+    # Redact SSN (XXX-XX-1234 becomes XXX-XX-XXXX)
+    text = re.sub(r'\d{3}-\d{2}-\d{4}', 'XXX-XX-XXXX', text)
+
+    # Redact SSN without dashes (123456789 becomes XXXXXXXXX)
+    text = re.sub(r'\b\d{9}\b', 'XXXXXXXXX', text)
+
+    # Redact account numbers (10-16 digits)
+    text = re.sub(r'\b\d{10,16}\b', 'XXXX-XXXX-XXXX', text)
+
+    # Redact credit card numbers
+    text = re.sub(r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b', 'XXXX-XXXX-XXXX-XXXX', text)
+
+    # Redact routing numbers (9 digits)
+    text = re.sub(r'\b\d{9}\b', 'XXXXXXXXX', text)
+
+    return text
+
 def audit_log(category: str, action: str, details: Dict):
-    """Log all security and data access events"""
+    """Log all security and data access events with PII redaction"""
+    # Convert details to JSON string for redaction
+    details_str = json.dumps(details)
+
+    # Redact sensitive data
+    redacted_details_str = redact_sensitive_data(details_str)
+
+    # Parse back to dict
+    try:
+        redacted_details = json.loads(redacted_details_str)
+    except:
+        redacted_details = {"redacted_data": redacted_details_str}
+
     log_entry = {
         "timestamp": datetime.now().isoformat(),
         "category": category,
         "action": action,
-        "details": details
+        "details": redacted_details
     }
 
     # Append to audit log file
