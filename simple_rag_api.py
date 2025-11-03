@@ -635,6 +635,180 @@ async def get_audit_log(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Audit log retrieval failed: {str(e)}")
 
+# ====================
+# DASHBOARD ENDPOINTS
+# ====================
+
+@app.get("/loans")
+async def list_loans(
+    request: Request,
+    api_key: str = Header(None, alias="X-API-Key")
+):
+    """List all loans with basic info (DASHBOARD)"""
+    verify_api_key(api_key)
+    check_rate_limit(request)
+
+    try:
+        loans = []
+
+        if not os.path.exists(upload_dir):
+            return {"loans": [], "total": 0}
+
+        for loan_dir_name in os.listdir(upload_dir):
+            loan_path = os.path.join(upload_dir, loan_dir_name)
+
+            if os.path.isdir(loan_path):
+                # Get directory info
+                dir_stat = os.stat(loan_path)
+                created_time = datetime.fromtimestamp(dir_stat.st_ctime)
+                modified_time = datetime.fromtimestamp(dir_stat.st_mtime)
+
+                # Count documents
+                doc_count = len([f for f in os.listdir(loan_path) if not f.startswith('.')])
+
+                loans.append({
+                    "loan_id": loan_dir_name,
+                    "document_count": doc_count,
+                    "created_date": created_time.isoformat(),
+                    "last_updated": modified_time.isoformat(),
+                    "status": "active"
+                })
+
+        # Sort by most recent first
+        loans.sort(key=lambda x: x['last_updated'], reverse=True)
+
+        audit_log("DATA_ACCESS", "LIST_LOANS", {
+            "loan_count": len(loans),
+            "ip": request.client.host
+        })
+
+        return {
+            "loans": loans,
+            "total": len(loans),
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        audit_log("ERROR", "LIST_LOANS_FAILED", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Failed to list loans: {str(e)}")
+
+@app.get("/loans/{loan_id}")
+async def get_loan_details(
+    request: Request,
+    loan_id: str,
+    api_key: str = Header(None, alias="X-API-Key")
+):
+    """Get detailed information about a specific loan (DASHBOARD)"""
+    verify_api_key(api_key)
+    check_rate_limit(request)
+
+    try:
+        safe_loan_id = sanitize_filename(loan_id)
+        loan_path = os.path.join(upload_dir, safe_loan_id)
+
+        if not os.path.exists(loan_path):
+            raise HTTPException(status_code=404, detail=f"Loan {loan_id} not found")
+
+        # Get documents
+        documents = []
+        for filename in os.listdir(loan_path):
+            if not filename.startswith('.'):
+                file_path = os.path.join(loan_path, filename)
+                file_stat = os.stat(file_path)
+
+                documents.append({
+                    "filename": filename,
+                    "size": file_stat.st_size,
+                    "size_mb": round(file_stat.st_size / (1024 * 1024), 2),
+                    "uploaded_date": datetime.fromtimestamp(file_stat.st_ctime).isoformat(),
+                    "download_url": f"/loans/{safe_loan_id}/documents/{filename}"
+                })
+
+        # Run analysis
+        loan_data = {
+            "loan_id": safe_loan_id,
+            "loan_type": "conventional",
+            "borrower_info": {},
+            "documents": documents
+        }
+        analysis_result = analyze_loan_simple(loan_data)
+
+        # Get directory info
+        dir_stat = os.stat(loan_path)
+
+        audit_log("DATA_ACCESS", "VIEW_LOAN", {
+            "loan_id": safe_loan_id,
+            "ip": request.client.host
+        })
+
+        return {
+            "loan_id": safe_loan_id,
+            "created_date": datetime.fromtimestamp(dir_stat.st_ctime).isoformat(),
+            "last_updated": datetime.fromtimestamp(dir_stat.st_mtime).isoformat(),
+            "documents": documents,
+            "document_count": len(documents),
+            "analysis": analysis_result,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        audit_log("ERROR", "GET_LOAN_FAILED", {"error": str(e), "loan_id": loan_id})
+        raise HTTPException(status_code=500, detail=f"Failed to get loan details: {str(e)}")
+
+@app.get("/loans/{loan_id}/documents/{filename}")
+async def download_document(
+    request: Request,
+    loan_id: str,
+    filename: str,
+    api_key: str = Header(None, alias="X-API-Key")
+):
+    """Download a specific document (DASHBOARD)"""
+    verify_api_key(api_key)
+    check_rate_limit(request)
+
+    try:
+        from fastapi.responses import FileResponse
+
+        safe_loan_id = sanitize_filename(loan_id)
+        safe_filename = sanitize_filename(filename)
+
+        file_path = os.path.join(upload_dir, safe_loan_id, safe_filename)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail=f"Document not found")
+
+        # Verify file is still within upload directory (security check)
+        real_path = os.path.realpath(file_path)
+        real_upload_dir = os.path.realpath(upload_dir)
+
+        if not real_path.startswith(real_upload_dir):
+            audit_log("SECURITY", "PATH_TRAVERSAL_ATTEMPT", {
+                "loan_id": loan_id,
+                "filename": filename,
+                "ip": request.client.host
+            })
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        audit_log("DATA_ACCESS", "DOWNLOAD_DOCUMENT", {
+            "loan_id": safe_loan_id,
+            "filename": safe_filename,
+            "ip": request.client.host
+        })
+
+        return FileResponse(
+            path=file_path,
+            filename=safe_filename,
+            media_type='application/octet-stream'
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        audit_log("ERROR", "DOWNLOAD_FAILED", {"error": str(e), "loan_id": loan_id, "filename": filename})
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
+
 if __name__ == "__main__":
     print("🔒 Starting SECURED Loan Processor RAG API...")
     print("📍 Server: http://localhost:8000")
