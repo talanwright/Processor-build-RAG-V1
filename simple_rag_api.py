@@ -18,6 +18,7 @@ import secrets
 import hashlib
 from collections import defaultdict
 import time
+import magic
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -54,6 +55,17 @@ DOCUMENT_RETENTION_DAYS = 30
 
 # File size limit (10 MB to prevent DoS attacks)
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+# Allowed file types (only accept legitimate loan documents)
+ALLOWED_EXTENSIONS = {'.pdf', '.docx', '.doc', '.txt', '.jpg', '.png'}
+ALLOWED_MIME_TYPES = {
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword',
+    'text/plain',
+    'image/jpeg',
+    'image/png'
+}
 
 # Audit log file
 AUDIT_LOG_FILE = "./audit_log.json"
@@ -168,6 +180,47 @@ def check_file_size(file_path: str) -> bool:
             status_code=413,
             detail=f"File too large. Maximum size is {MAX_FILE_SIZE / (1024 * 1024)} MB"
         )
+    return True
+
+def validate_file(file_path: str, filename: str) -> bool:
+    """Validate file type by extension and actual MIME type to prevent malicious uploads"""
+    # Check extension
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        audit_log("SECURITY", "INVALID_FILE_TYPE", {
+            "filename": filename,
+            "extension": ext,
+            "reason": "extension_not_allowed"
+        })
+        raise HTTPException(
+            status_code=400,
+            detail=f"File type not allowed. Accepted types: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+
+    # Check actual file type (not just extension) to prevent spoofing
+    try:
+        mime = magic.from_file(file_path, mime=True)
+        if mime not in ALLOWED_MIME_TYPES:
+            audit_log("SECURITY", "INVALID_FILE_TYPE", {
+                "filename": filename,
+                "extension": ext,
+                "actual_mime": mime,
+                "reason": "mime_type_mismatch"
+            })
+            raise HTTPException(
+                status_code=400,
+                detail=f"File type validation failed. File appears to be {mime}, not a valid document type."
+            )
+    except Exception as e:
+        audit_log("SECURITY", "FILE_VALIDATION_ERROR", {
+            "filename": filename,
+            "error": str(e)
+        })
+        raise HTTPException(
+            status_code=400,
+            detail="Unable to validate file type. Please ensure the file is not corrupted."
+        )
+
     return True
 
 def cleanup_old_documents():
@@ -331,6 +384,9 @@ async def upload_documents(
 
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
+
+            # Validate file type (extension + MIME type)
+            validate_file(file_path, safe_filename)
 
             # Check file size (raises HTTPException if too large)
             check_file_size(file_path)
