@@ -18,7 +18,7 @@ import secrets
 import hashlib
 from collections import defaultdict
 import time
-import magic
+import filetype
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -199,18 +199,35 @@ def validate_file(file_path: str, filename: str) -> bool:
 
     # Check actual file type (not just extension) to prevent spoofing
     try:
-        mime = magic.from_file(file_path, mime=True)
-        if mime not in ALLOWED_MIME_TYPES:
+        kind = filetype.guess(file_path)
+
+        # If filetype can detect the file, validate it
+        if kind is not None:
+            if kind.mime not in ALLOWED_MIME_TYPES:
+                audit_log("SECURITY", "INVALID_FILE_TYPE", {
+                    "filename": filename,
+                    "extension": ext,
+                    "actual_mime": kind.mime,
+                    "reason": "mime_type_mismatch"
+                })
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File type validation failed. File appears to be {kind.mime}, not a valid document type."
+                )
+        # For text files (.txt) that filetype can't detect, allow if extension matches
+        elif ext not in ['.txt']:
             audit_log("SECURITY", "INVALID_FILE_TYPE", {
                 "filename": filename,
                 "extension": ext,
-                "actual_mime": mime,
-                "reason": "mime_type_mismatch"
+                "reason": "unable_to_detect_type"
             })
             raise HTTPException(
                 status_code=400,
-                detail=f"File type validation failed. File appears to be {mime}, not a valid document type."
+                detail="Unable to validate file type. Please ensure the file is a valid document."
             )
+
+    except HTTPException:
+        raise  # Re-raise HTTPExceptions
     except Exception as e:
         audit_log("SECURITY", "FILE_VALIDATION_ERROR", {
             "filename": filename,
