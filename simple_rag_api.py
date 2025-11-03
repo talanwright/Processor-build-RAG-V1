@@ -20,7 +20,12 @@ from collections import defaultdict
 import time
 
 # Initialize FastAPI app
-app = FastAPI(title="Loan Processor RAG API (SECURED)", version="2.0.0")
+app = FastAPI(
+    title="Loan Processor RAG API (SECURED)",
+    version="2.0.0",
+    docs_url=None,  # Disable /docs endpoint in production
+    redoc_url=None  # Disable /redoc endpoint in production
+)
 
 # ====================
 # SECURITY CONFIGURATION
