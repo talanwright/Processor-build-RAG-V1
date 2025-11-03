@@ -52,6 +52,9 @@ rate_limit_store = defaultdict(list)
 # Document retention (auto-delete after X days)
 DOCUMENT_RETENTION_DAYS = 30
 
+# File size limit (10 MB to prevent DoS attacks)
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
 # Audit log file
 AUDIT_LOG_FILE = "./audit_log.json"
 
@@ -147,6 +150,25 @@ def sanitize_filename(filename: str) -> str:
     safe_name = os.path.basename(filename)
     safe_name = "".join(c for c in safe_name if c.isalnum() or c in "._- ")
     return safe_name
+
+def check_file_size(file_path: str) -> bool:
+    """Check if file size is within allowed limit to prevent DoS attacks"""
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=400, detail="File does not exist")
+
+    size = os.path.getsize(file_path)
+    if size > MAX_FILE_SIZE:
+        # Log the attempted large file upload
+        audit_log("SECURITY", "FILE_TOO_LARGE", {
+            "file_path": os.path.basename(file_path),
+            "size_mb": round(size / (1024 * 1024), 2),
+            "max_size_mb": round(MAX_FILE_SIZE / (1024 * 1024), 2)
+        })
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum size is {MAX_FILE_SIZE / (1024 * 1024)} MB"
+        )
+    return True
 
 def cleanup_old_documents():
     """Delete documents older than retention period"""
@@ -309,6 +331,9 @@ async def upload_documents(
 
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
+
+            # Check file size (raises HTTPException if too large)
+            check_file_size(file_path)
 
             uploaded_files.append({
                 "filename": safe_filename,
