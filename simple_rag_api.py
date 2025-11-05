@@ -21,6 +21,9 @@ import time
 import filetype
 import re
 
+# Import document extractor
+from document_extractor import extractor
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Loan Processor RAG API (SECURED)",
@@ -321,7 +324,11 @@ class LoanAnalysisResponse(BaseModel):
 # ====================
 
 def analyze_loan_simple(loan_data):
-    """Simplified loan analysis (same as before)"""
+    """
+    Enhanced loan analysis with income extraction and red flag detection
+
+    Security: Extracts income/red flags from PDFs in memory, never saves raw text
+    """
     loan_id = loan_data.get('loan_id', 'unknown')
     loan_type = loan_data.get('loan_type', 'conventional')
     documents = loan_data.get('documents', [])
@@ -350,7 +357,6 @@ def analyze_loan_simple(loan_data):
 
     # Calculate scores
     completeness_score = len(present_docs) / len(required_docs)
-    risk_score = 0.3 if len(missing_docs) > 2 else 0.1
 
     # Create missing documents list
     missing_documents = []
@@ -361,7 +367,7 @@ def analyze_loan_simple(loan_data):
             'urgency': 'high' if doc in ['application', 'pay_stub'] else 'medium'
         })
 
-    # Create red flags
+    # Initialize red flags
     red_flags = []
     if len(documents) < 2:
         red_flags.append({
@@ -370,14 +376,55 @@ def analyze_loan_simple(loan_data):
             'description': 'Very few documents submitted for review'
         })
 
+    # === NEW: EXTRACT INCOME & RED FLAGS FROM PDFs ===
+    extraction_results = None
+    total_monthly_income = 0.0
+    income_breakdown = []
+    extraction_confidence = "none"
+
+    try:
+        # Get loan directory path
+        loan_dir = os.path.join(upload_dir, sanitize_filename(loan_id))
+
+        if os.path.exists(loan_dir) and documents:
+            # Run extraction (happens in memory, text never saved)
+            extraction_results = extractor.analyze_documents(loan_dir, documents)
+
+            # Get income data
+            total_monthly_income = extraction_results.get('total_monthly_income', 0.0)
+            income_breakdown = extraction_results.get('income_breakdown', [])
+            extraction_confidence = extraction_results.get('confidence', 'none')
+
+            # Merge extracted red flags with existing ones
+            extracted_flags = extraction_results.get('red_flags', [])
+            red_flags.extend(extracted_flags)
+
+    except Exception as e:
+        # If extraction fails, continue with basic analysis
+        print(f"Extraction error (non-fatal): {e}")
+
+    # Calculate risk score based on red flags and missing docs
+    base_risk = 0.3 if len(missing_docs) > 2 else 0.1
+    red_flag_risk = len(red_flags) * 0.05  # Each red flag adds 5% risk
+    risk_score = min(base_risk + red_flag_risk, 1.0)  # Cap at 100%
+
     # Generate actions
     suggested_actions = []
     if missing_docs:
         suggested_actions.append(f"Request missing documents: {', '.join(missing_docs)}")
-    if completeness_score >= 0.8:
-        suggested_actions.append("File appears ready for underwriting review")
 
-    return {
+    # Add red flag actions
+    high_severity_flags = [f for f in red_flags if f.get('severity') == 'high']
+    if high_severity_flags:
+        suggested_actions.append(f"Address {len(high_severity_flags)} high-severity red flags immediately")
+
+    if completeness_score >= 0.8 and len(red_flags) == 0:
+        suggested_actions.append("File appears ready for underwriting review")
+    elif completeness_score >= 0.8:
+        suggested_actions.append("Review red flags before proceeding to underwriting")
+
+    # Build response with extraction data
+    response = {
         'loan_id': loan_id,
         'loan_type': loan_type,
         'analysis_complete': True,
@@ -387,8 +434,15 @@ def analyze_loan_simple(loan_data):
         'red_flags': red_flags,
         'suggested_actions': suggested_actions,
         'email_template': 'missing_documents' if missing_docs else 'ready_for_underwriting',
-        'status': 'pending_documents' if missing_docs else 'ready_for_underwriting'
+        'status': 'pending_documents' if missing_docs else 'ready_for_underwriting',
+
+        # NEW: Income extraction results (NO PII - just numbers)
+        'total_monthly_income': total_monthly_income,
+        'income_breakdown': income_breakdown,
+        'extraction_confidence': extraction_confidence,
     }
+
+    return response
 
 # ====================
 # API ENDPOINTS
