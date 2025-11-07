@@ -1,0 +1,52 @@
+INCOME VERIFICATION RED FLAGS
+
+EMPLOYMENT RED FLAGS:
+- Employment start date less than 2 years ago (requires explanation)
+- Frequent job changes within same industry
+- Employment gaps longer than 30 days without explanation
+- Employer unable to verify employment
+- Round numbers on pay stubs (indicates potential fraud)
+- Inconsistent employer information across documents
+
+PAY STUB RED FLAGS:
+- Pay stub dates outside required 30-day window
+- Handwritten or altered pay stubs
+- Poor print quality or formatting inconsistencies
+- Missing employer information or tax withholdings
+- Year-to-date figures that don't align with pay periods
+- Base pay inconsistent with hourly rate calculations
+
+INCOME DISCREPANCIES:
+- Application income differs from pay stub income by >10%
+- W-2 income doesn't align with pay stub year-to-date
+- Tax return income significantly lower than stated income
+- Overtime/bonus income not sustainable (less than 2 years history)
+- Commission income without 2-year average
+
+SELF-EMPLOYED RED FLAGS:
+- Tax returns showing losses but claiming positive cash flow
+- Significant depreciation reducing net income
+- Business expenses that seem excessive or personal
+- Inconsistent business income year over year
+- Unable to provide business bank statements
+
+DOCUMENTATION RED FLAGS:
+- Documents from unknown or suspicious sources
+- Missing pages from tax returns or bank statements
+- Different fonts or formatting within same document
+- Photocopied documents when originals required
+- Employer verification letters on personal letterhead
+
+VERIFICATION ISSUES:
+- Employer phone number goes to voicemail or personal phone
+- HR department cannot verify employment details
+- Employment verification contradicts pay stub information
+- Employer reluctant to provide written verification
+- Third-party payroll company cannot verify employment
+
+INCOME CALCULATION RED FLAGS:
+- Using gross income when net income more appropriate
+- Including non-recurring income sources
+- Counting temporary or contract income as permanent
+- Double-counting income sources
+- Failing to deduct required business expenses
