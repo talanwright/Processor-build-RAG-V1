@@ -1,1 +1,1 @@
-web: cd loan-processor-rag && uvicorn simple_rag_api:app --host 0.0.0.0 --port $PORT
+web: uvicorn simple_rag_api:app --host 0.0.0.0 --port $PORT
