@@ -44,7 +44,7 @@ Hacker tries to access: ❌ REJECTED (no API key)
 Make.com with API key: ✅ ALLOWED
 ```
 
-**Your API key example:** `sk_live_a8f3j2k9d8s7f6g5h4j3k2l1m0n9`
+**Your API key example:** `sk_live_YOUR_SECRET_KEY_HERE_32_CHARS`
 
 **Where you set it:** In Railway environment variables (hidden, never in code)
 
@@ -259,7 +259,7 @@ Your system helps with:
 1. **Set Strong API Key**
    - Use the auto-generated one from Railway
    - Never use "password123" or similar
-   - Example good key: `sk_live_K7n3mQ9pR2jL8wX4vF6hY1sT5bN0cZ`
+   - Example good key: `sk_live_YOUR_RANDOM_KEY_HERE_XXXXXXXX`
 
 2. **Keep API Key Secret**
    - Don't put in emails
