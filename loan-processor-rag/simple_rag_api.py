@@ -863,6 +863,69 @@ async def download_document(
         audit_log("ERROR", "DOWNLOAD_FAILED", {"error": str(e), "loan_id": loan_id, "filename": filename})
         raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
 
+@app.get("/loans/{loan_id}/documents/{filename}/base64")
+async def download_document_base64(
+    request: Request,
+    loan_id: str,
+    filename: str,
+    api_key: str = Header(None, alias="X-API-Key")
+):
+    """Download a specific document as base64 JSON (for Retool dashboard)"""
+    verify_api_key(api_key)
+    check_rate_limit(request)
+
+    try:
+        import base64
+        import mimetypes
+
+        safe_loan_id = sanitize_filename(loan_id)
+        safe_filename = sanitize_filename(filename)
+
+        file_path = os.path.join(upload_dir, safe_loan_id, safe_filename)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail=f"Document not found")
+
+        # Verify file is still within upload directory (security check)
+        real_path = os.path.realpath(file_path)
+        real_upload_dir = os.path.realpath(upload_dir)
+
+        if not real_path.startswith(real_upload_dir):
+            audit_log("SECURITY", "PATH_TRAVERSAL_ATTEMPT", {
+                "loan_id": loan_id,
+                "filename": filename,
+                "ip": request.client.host
+            })
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        # Read file and encode as base64
+        with open(file_path, 'rb') as f:
+            file_content = f.read()
+            base64_content = base64.b64encode(file_content).decode('utf-8')
+
+        # Guess MIME type
+        mime_type, _ = mimetypes.guess_type(safe_filename)
+        if not mime_type:
+            mime_type = 'application/octet-stream'
+
+        audit_log("DATA_ACCESS", "DOWNLOAD_DOCUMENT_BASE64", {
+            "loan_id": safe_loan_id,
+            "filename": safe_filename,
+            "ip": request.client.host
+        })
+
+        return {
+            "filename": safe_filename,
+            "content": base64_content,
+            "mimeType": mime_type
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        audit_log("ERROR", "DOWNLOAD_BASE64_FAILED", {"error": str(e), "loan_id": loan_id, "filename": filename})
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
+
 if __name__ == "__main__":
     print("🔒 Starting SECURED Loan Processor RAG API...")
     print("📍 Server: http://localhost:8000")
