@@ -4,6 +4,7 @@ python-multipart
 pydantic
 
 # Document Processing
+filetype
 PyPDF2
 python-docx
 pandas
