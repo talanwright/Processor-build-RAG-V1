@@ -436,9 +436,16 @@
                                 <div class="activity-id">${item.id}</div>
                                 <div class="activity-time">${item.time}</div>
                             </div>
-                            <span class="activity-status status-${item.status}">
-                                ${item.status === 'success' ? '✓ Processed' : '⏳ Processing'}
-                            </span>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <span class="activity-status status-${item.status}">
+                                    ${item.status === 'success' ? '✓ Processed' : '⏳ Processing'}
+                                </span>
+                                ${item.status === 'success' ? `
+                                    <button class="refresh-btn" style="padding: 6px 12px; font-size: 14px;" onclick="viewLoanDetails('${item.id}')">
+                                        📥 View/Download
+                                    </button>
+                                ` : ''}
+                            </div>
                         </li>
                     `).join('')}
                 </ul>
@@ -465,6 +472,71 @@
         // Refresh data
         function refreshData() {
             loadDashboard();
+        }
+
+        // View loan details and download documents
+        async function viewLoanDetails(loanId) {
+            try {
+                const response = await fetch(`${API_URL}/loans/${loanId}`, {
+                    headers: {
+                        'X-API-Key': API_KEY
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch loan details');
+                }
+
+                const data = await response.json();
+
+                if (data.documents && data.documents.length > 0) {
+                    // Create a list of documents with download links
+                    let message = `Loan ${loanId} has ${data.documents.length} document(s):\n\n`;
+
+                    data.documents.forEach(doc => {
+                        message += `• ${doc.filename}\n`;
+                    });
+
+                    message += `\nClick OK to download all documents.`;
+
+                    if (confirm(message)) {
+                        // Download each document
+                        data.documents.forEach(doc => {
+                            const downloadUrl = `${API_URL}/loans/${loanId}/documents/${doc.filename}`;
+
+                            // Create a temporary link and click it
+                            const a = document.createElement('a');
+                            a.href = downloadUrl;
+                            a.download = doc.filename;
+                            a.target = '_blank';
+
+                            // Add API key as header by using fetch and blob
+                            fetch(downloadUrl, {
+                                headers: {
+                                    'X-API-Key': API_KEY
+                                }
+                            })
+                            .then(response => response.blob())
+                            .then(blob => {
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = doc.filename;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                a.remove();
+                            });
+                        });
+                    }
+                } else {
+                    alert('No documents found for this loan.');
+                }
+
+            } catch (error) {
+                console.error('Error fetching loan details:', error);
+                alert('Failed to fetch loan details. Please try again.');
+            }
         }
 
         // Auto-refresh every 30 seconds if logged in
