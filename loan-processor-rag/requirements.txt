@@ -2,5 +2,16 @@ fastapi
 uvicorn[standard]
 python-multipart
 pydantic
+
+# Document Processing
 filetype
 PyPDF2
+python-docx
+pandas
+
+# Vector Database & Embeddings
+chromadb
+sentence-transformers
+
+# Additional dependencies
+numpy

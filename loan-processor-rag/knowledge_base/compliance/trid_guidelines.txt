@@ -1,0 +1,180 @@
+TRID (TILA-RESPA INTEGRATED DISCLOSURE) GUIDELINES
+
+OVERVIEW:
+TRID combines Truth in Lending Act (TILA) and Real Estate Settlement Procedures Act (RESPA) requirements into integrated disclosures for residential mortgage transactions.
+
+APPLICABILITY:
+- Closed-end consumer credit transactions secured by real property
+- Does NOT apply to: HELOC, reverse mortgages, mobile homes not attached to land, loans by person/entity making 5 or fewer mortgages per year
+- Applies to purchases, refinances, construction loans, assumption transactions
+
+REQUIRED DISCLOSURES:
+
+1. LOAN ESTIMATE (LE)
+- Must be provided within 3 business days of application
+- Valid for 10 business days (with certain exceptions)
+- Cannot be issued before borrower provides 6 pieces of information: name, income, SSN, property address, estimate of property value, desired loan amount
+
+2. CLOSING DISCLOSURE (CD)
+- Must be provided at least 3 business days before consummation
+- Provides final loan terms and closing costs
+- Must be in borrower's possession 3 business days before closing
+
+TIMING REQUIREMENTS:
+
+Application to Loan Estimate:
+- LE must be delivered within 3 business days of receiving application
+- Business days = all calendar days except Sundays and legal public holidays
+- Delivery methods: hand delivery, mail (add 3 days), email (if consented)
+
+Loan Estimate to Closing Disclosure:
+- CD must be received at least 3 business days before consummation
+- Business days = all calendar days except Sundays and legal public holidays
+- 3-day waiting period cannot be waived except in bona fide personal financial emergency
+
+Closing Disclosure Changes Requiring New 3-Day Wait:
+1. APR increases by more than 0.125% for most loans (0.25% for irregular loans)
+2. Loan product changes (e.g., fixed to ARM)
+3. Prepayment penalty is added
+
+REVISED DISCLOSURES:
+
+When Revised LE is Required:
+- Changed circumstances affecting eligibility or value
+- Changed circumstances affecting estimated charges (outside 10% tolerance)
+- Borrower-requested changes
+- Interest rate lock/expiration
+- Construction loan conversion
+- New information affecting disclosures
+
+Tolerance Categories:
+
+Zero Tolerance (Cannot Increase):
+- Lender's charges for origination
+- Charges for services borrower cannot shop for
+- Transfer taxes
+
+10% Cumulative Tolerance:
+- Recording fees
+- Charges for third-party services borrower can shop for (if borrower does not select provider from lender's list)
+
+No Tolerance Limit (Can Change):
+- Prepaid interest
+- Property insurance premiums
+- Amounts placed in escrow
+- Charges for third-party services borrower can shop for (if borrower selects provider from lender's list)
+- Charges paid to affiliates when borrower was permitted to shop
+
+CHANGED CIRCUMSTANCES:
+
+Valid Changed Circumstances:
+1. Acts of God, war, disaster, or other emergency
+2. Information specific to borrower or transaction that was relied upon, changes or is found inaccurate after LE issued
+3. New information specific to borrower or transaction not relied upon when LE issued
+4. Borrower-requested changes
+5. Interest rate lock or expiration
+6. Construction loan conversion
+7. Delayed settlement date (beyond 60 days)
+
+Documentation Required:
+- Written description of changed circumstance
+- Supporting documentation
+- Revised LE with explanation
+- Maintain in loan file for 5 years
+
+RECORD RETENTION:
+- All TRID-related documents must be retained for 5 years after consummation
+- Evidence of compliance required
+- Documentation of changed circumstances
+- Proof of delivery/receipt of disclosures
+
+COMMON VIOLATIONS:
+
+1. TIMING VIOLATIONS:
+- LE not delivered within 3 business days of application
+- CD not provided 3 business days before consummation
+- Closing before 3-day waiting period expires
+
+2. CONTENT VIOLATIONS:
+- Incorrect fee amounts outside tolerance limits
+- Missing required information
+- Incorrect APR calculation
+- Failure to disclose fees
+
+3. PROCEDURAL VIOLATIONS:
+- Invalid reason for revised LE
+- Insufficient documentation of changed circumstances
+- Failure to reset 3-day waiting period when required
+- Improper tolerance category assignment
+
+4. DISCLOSURE VIOLATIONS:
+- CD not in borrower's possession 3 days before closing
+- Incorrect delivery method documentation
+- Failure to provide revised CD when required
+
+RED FLAGS TO WATCH:
+
+1. TIMING RED FLAGS:
+- Rushing application to closing in less than 7 business days
+- Insufficient time between LE and CD
+- Last-minute changes to loan terms
+- Pressure to close before 3-day period expires
+
+2. FEE RED FLAGS:
+- Fees increasing beyond tolerance limits without valid changed circumstance
+- Missing documentation for fee changes
+- Inconsistent fees between LE and CD
+- Fees not properly categorized
+
+3. DOCUMENTATION RED FLAGS:
+- Missing proof of LE/CD delivery
+- No documentation for changed circumstances
+- Incomplete application file
+- Missing borrower acknowledgments
+
+4. COMPLIANCE RED FLAGS:
+- Pattern of tolerance violations
+- Frequent revised LEs without valid reasons
+- APR miscalculations
+- Incorrect service provider categorization
+
+BEST PRACTICES:
+
+1. APPLICATION STAGE:
+- Collect all 6 application elements before issuing LE
+- Document receipt date and time
+- Provide LE within required timeframe
+- Use accurate estimates from reliable sources
+
+2. PROCESSING STAGE:
+- Monitor for changed circumstances
+- Document all changes thoroughly
+- Issue revised LEs when required
+- Track tolerance categories carefully
+
+3. CLOSING STAGE:
+- Prepare CD in advance
+- Allow sufficient time for 3-day waiting period
+- Coordinate with all parties on timeline
+- Document CD delivery method and date
+
+4. ONGOING COMPLIANCE:
+- Regular staff training on TRID requirements
+- Audit files for compliance
+- Maintain documentation for 5 years
+- Update procedures as regulations change
+
+PENALTIES FOR VIOLATIONS:
+- Individual violations: Up to $5,000 per day
+- Pattern or practice violations: Up to $25,000 per day
+- Knowing violations: Criminal penalties possible
+- Civil liability for damages
+- Borrower right to rescission in certain cases
+
+CFPB EXAMINATION FOCUS:
+- Accurate and timely delivery of LE and CD
+- Proper fee tolerance compliance
+- Valid changed circumstances documentation
+- 3-day waiting period compliance
+- Record retention compliance
+- Staff training and procedures
