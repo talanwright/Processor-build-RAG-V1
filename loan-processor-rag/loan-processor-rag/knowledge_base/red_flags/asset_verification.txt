@@ -1,0 +1,276 @@
+ASSET VERIFICATION RED FLAGS
+
+OVERVIEW:
+Asset verification is critical for loan approval. Red flags in asset documentation can indicate fraud, undisclosed debt, or inability to meet loan requirements. Processors must scrutinize bank statements, investment accounts, and other asset documentation.
+
+LARGE DEPOSIT RED FLAGS:
+
+1. UNEXPLAINED LARGE DEPOSITS:
+- Deposits over $1,000 (some lenders) or $5,000 (others) without explanation
+- Multiple deposits just under reporting threshold ($10,000)
+- Deposits inconsistent with borrower's income
+- Timing: Large deposits shortly before loan application
+- Pattern: Multiple large deposits from unknown sources
+
+2. STRUCTURING DEPOSITS:
+- Multiple deposits of $9,000-$9,900 (avoiding $10,000 reporting)
+- Pattern of deposits just below lender's threshold
+- Frequent cash deposits in round numbers
+- Split deposits from same source
+
+3. SUSPICIOUS DEPOSIT SOURCES:
+- Cash deposits without verifiable source
+- Third-party deposits from non-family members
+- Business account transfers for W-2 employees
+- Foreign wire transfers without explanation
+- Peer-to-peer payment app transfers (Venmo, Zelle, CashApp)
+
+BANK STATEMENT RED FLAGS:
+
+1. DOCUMENT TAMPERING:
+- Misaligned text or numbers
+- Different fonts within same document
+- White-out or corrections
+- Poor image quality suggesting scanning of copies
+- Missing pages in sequence
+- Inconsistent formatting between pages
+- Headers/footers that don't match bank's standard format
+
+2. ELECTRONIC STATEMENT ISSUES:
+- PDF properties show recent creation date
+- Metadata indicates editing software used
+- Downloaded from non-bank website
+- Email statements from non-bank email addresses
+- Screenshots instead of PDF statements
+- Statements with editing layers visible
+
+3. SUSPICIOUS TRANSACTIONS:
+- Transfers between same party (back and forth)
+- Deposits followed immediately by withdrawals of same amount
+- Pattern of overdrafts or NSF fees
+- Frequent cash advances on credit cards
+- Gambling transactions (casinos, online betting)
+- Payday loan transactions
+- Title loan or high-interest loan payments
+
+4. ACCOUNT BALANCE ISSUES:
+- Balance increasing dramatically just before application
+- Average balance significantly lower than current balance
+- Negative balances or overdrafts
+- Insufficient funds to cover down payment and closing costs
+- Balance declining rapidly during loan process
+
+SEASONING ISSUES:
+
+1. INSUFFICIENT SEASONING:
+- Funds deposited less than 60 days before application
+- Recent large transfers between accounts
+- New account opened shortly before application
+- Sudden increase in balance without sourcing
+- Gift funds not properly seasoned (if required)
+
+2. SEASONING REQUIREMENTS BY LOAN TYPE:
+- Conventional: 60 days (funds in account)
+- FHA: 60 days (large deposits must be sourced)
+- VA: Large deposits must be explained regardless of timing
+- USDA: 60 days for significant deposits
+- Jumbo: Often 90+ days required
+
+GIFT FUND RED FLAGS:
+
+1. MISSING DOCUMENTATION:
+- No gift letter from donor
+- Gift letter not signed
+- Gift letter missing required elements
+- No proof of donor's ability to gift
+- No proof of transfer from donor to borrower
+
+2. SUSPICIOUS GIFT PATTERNS:
+- Gift amount exactly equals shortfall
+- Gift from non-family member (not allowed for most loans)
+- Gift timing suspicious (last minute)
+- Donor's account shows insufficient funds
+- Gift appears to be a loan (deposit followed by withdrawal pattern)
+- Multiple gifts from different sources
+
+3. GIFT LETTER ISSUES:
+- States gift must be repaid (not a true gift)
+- Donor relationship not clearly established
+- Missing donor contact information
+- Gift letter template errors
+- Amount doesn't match actual transfer
+
+RETIREMENT ACCOUNT RED FLAGS:
+
+1. DOCUMENTATION ISSUES:
+- Screenshots instead of official statements
+- Account statements older than 60 days
+- Missing account holder name
+- Account number redacted or not visible
+- Balance not clearly stated
+
+2. WITHDRAWAL CONCERNS:
+- Early withdrawal without addressing penalty/taxes
+- Insufficient vested balance
+- Loan against 401(k) not disclosed
+- Required minimum distributions not considered
+- Employer match subject to vesting schedule
+
+3. VALUATION ISSUES:
+- Only 60-70% of retirement balance counted (penalty consideration)
+- Market volatility affecting balance
+- Restricted stock or options included in balance
+- Non-liquid holdings counted at full value
+
+INVESTMENT ACCOUNT RED FLAGS:
+
+1. VALUATION ISSUES:
+- Market volatility since statement date
+- Illiquid assets counted at full value
+- Private placements or restricted securities
+- Stock options not yet vested
+- Cryptocurrency holdings (many lenders won't accept)
+
+2. MARGIN ACCOUNTS:
+- Margin loans not disclosed as debt
+- Leveraged positions not considered
+- Margin call potential
+- Net equity vs. total value confusion
+
+BUSINESS ACCOUNT RED FLAGS:
+
+1. PERSONAL/BUSINESS COMMINGLING:
+- W-2 employee using business account for down payment
+- Self-employed borrower without clear separation
+- Business account used for personal expenses
+- Personal funds in business account without documentation
+
+2. BUSINESS ASSET ISSUES:
+- Business assets counted as personal assets
+- Partnership/LLC assets without proper documentation
+- Borrower's ownership percentage not documented
+- Business value overstated
+- Accounts receivable counted as liquid assets
+
+DOCUMENTATION RED FLAGS:
+
+1. INCOMPLETE DOCUMENTATION:
+- Missing pages from statements
+- Partial account numbers only
+- Account holder name not visible
+- Institution name/logo missing
+- Statement period dates unclear
+
+2. INCONSISTENT INFORMATION:
+- Account numbers don't match across documents
+- Borrower name spelling inconsistent
+- Address doesn't match application
+- Account type unclear or changes
+- Balance doesn't reconcile between documents
+
+3. DELAYED SUBMISSION:
+- Borrower slow to provide asset documentation
+- Multiple requests needed for same documentation
+- Documents provided at last minute
+- Different documents provided each time requested
+- Borrower reluctant to provide certain accounts
+
+CROSS-VERIFICATION RED FLAGS:
+
+1. INCOME/ASSET MISMATCHES:
+- Assets too high for stated income
+- Assets too low for stated income/lifestyle
+- Deposit patterns don't match pay frequency
+- Salary deposits don't match pay stubs/W-2
+
+2. DEBT/ASSET INCONSISTENCIES:
+- Hidden debt revealed through bank statements
+- Loan payments not disclosed on application
+- Credit card payments exceed disclosed balances
+- Auto loan payments indicating undisclosed vehicle debt
+
+3. EMPLOYMENT MISMATCHES:
+- Direct deposits from different employer
+- No direct deposits (inconsistent with W-2 employment)
+- Self-employment income not matching business account deposits
+- Irregular income pattern inconsistent with claimed salary
+
+SOURCE OF FUNDS ISSUES:
+
+1. UNACCEPTABLE SOURCES:
+- Borrowed funds (personal loans)
+- Cash without documentation
+- Recent credit card advances
+- Payday loans
+- Unsecured lines of credit
+- Funds from undisclosed source
+
+2. REQUIRES ADDITIONAL DOCUMENTATION:
+- Sale of assets (need proof of ownership and sale)
+- Lawsuit settlement (need settlement documents)
+- Insurance proceeds (need claim documentation)
+- Tax refunds (need tax returns)
+- Business proceeds (need business documentation)
+- Inheritance (need estate documents)
+
+FRAUD INDICATORS:
+
+1. HIGH-RISK PATTERNS:
+- Multiple accounts at different institutions suddenly showing same pattern
+- All accounts opened or funded recently
+- Pattern suggests "renting" bank statements
+- Borrower providing updated statements showing increasing balances
+- Funds appearing and disappearing across accounts
+
+2. DIGITAL FRAUD INDICATORS:
+- PDF created recently (check properties)
+- Editing software in metadata
+- Images embedded rather than native text
+- Cut-and-paste evidence
+- Inconsistent date formats
+
+3. PROFESSIONAL FRAUD INDICATORS:
+- High-quality forgeries
+- Perfect document formatting
+- Too good to be true (no normal banking activity)
+- Consistent suspicious patterns across multiple files
+- Documents match known fraud templates
+
+VERIFICATION BEST PRACTICES:
+
+1. STANDARD VERIFICATION:
+- Obtain most recent 2 months statements for all accounts
+- Verify large deposits over threshold
+- Source all non-payroll deposits
+- Calculate average balance over 2 months
+- Verify account ownership
+
+2. ENHANCED VERIFICATION:
+- Request additional months if suspicious activity
+- Verify directly with financial institution
+- Request verification of deposit (VOD) form
+- Obtain transaction history for specific items
+- Cross-reference with other documentation
+
+3. WHEN TO REJECT:
+- Clear evidence of tampering
+- Unable to verify source of funds
+- Borrowed funds used for down payment
+- Fraudulent documents confirmed
+- Borrower refuses to provide additional documentation
+
+REPORTING REQUIREMENTS:
+
+1. SUSPICIOUS ACTIVITY:
+- File Suspicious Activity Report (SAR) if fraud suspected
+- Report to lender's fraud department
+- Document all red flags in loan file
+- Decline loan if unable to resolve concerns
+- Maintain documentation for regulatory review
+
+2. DOCUMENTATION REQUIREMENTS:
+- Written explanation for all large deposits
+- Source documentation for all funds used for transaction
+- Gift letters with supporting documentation
+- Asset verification letters when required
+- Electronic verification when possible (asset verification services)

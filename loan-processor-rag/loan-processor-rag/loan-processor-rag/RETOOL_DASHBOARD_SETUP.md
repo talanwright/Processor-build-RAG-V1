@@ -286,8 +286,6 @@ Inside the container, below the analysis section:
 
 ---
 
-
-
 ## STEP 8: Add Search & Filters (15 minutes)
 
 ### 8.1 Add Search Bar
