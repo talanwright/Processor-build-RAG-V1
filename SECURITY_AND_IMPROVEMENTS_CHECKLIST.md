@@ -905,9 +905,8 @@ Use UptimeRobot to ping this every 5 minutes.
 
 ## Need to be completed 
 
-## Ping the loan officer once all the documents were recieved. 
-## Fix chat GPT prompt 
-## Easy way for the loan officer to read the documents and get what they need. 
-## Identifying any red flags
-## Calculate the total monthly income
+## Fix chat GPT prompt (I think I fixed it)
+## Identifying any red flags (need to test but this should be fixed)
+## Calculate the total monthly income (need to test but this should be fixed)
 ## Fix the make problem
+## make a follow up scenerio
