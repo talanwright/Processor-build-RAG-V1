@@ -3,6 +3,10 @@ uvicorn[standard]
 python-multipart
 pydantic
 
+# Database
+psycopg2-binary
+sqlalchemy
+
 # Document Processing
 filetype
 PyPDF2
