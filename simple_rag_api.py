@@ -189,7 +189,7 @@ def cleanup_old_documents():
 
 class LoanAnalysisRequest(BaseModel):
     loan_id: str
-    borrower_email: str
+    borrower_email: Optional[str] = None
     borrower_name: Optional[str] = None
     borrower_info: Dict[str, Any]
     loan_type: Optional[str] = "conventional"
@@ -324,7 +324,7 @@ async def upload_documents(
     request: Request,
     files: List[UploadFile] = File(...),
     loan_id: str = Form(...),
-    borrower_email: str = Form(...),
+    borrower_email: str = Form(None),
     api_key: str = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
