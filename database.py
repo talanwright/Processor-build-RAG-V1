@@ -9,7 +9,9 @@ from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.hybrid import hybrid_property
 from typing import Optional
+from encryption import encrypt_field, decrypt_field
 
 # Database URL from environment variable (Railway provides this automatically)
 DATABASE_URL = os.getenv(
@@ -40,8 +42,29 @@ class Loan(Base):
 
     # Primary fields
     loan_id = Column(String(255), primary_key=True, index=True)
-    borrower_email = Column(String(255), nullable=False, index=True)
-    borrower_name = Column(String(255), nullable=True)
+    _borrower_email = Column("borrower_email", Text, nullable=False)  # Encrypted
+    _borrower_name = Column("borrower_name", Text, nullable=True)  # Encrypted
+
+    # Encrypted field properties with automatic encryption/decryption
+    @hybrid_property
+    def borrower_email(self):
+        """Decrypt email when reading"""
+        return decrypt_field(self._borrower_email) if self._borrower_email else None
+
+    @borrower_email.setter
+    def borrower_email(self, value):
+        """Encrypt email when writing"""
+        self._borrower_email = encrypt_field(value) if value else None
+
+    @hybrid_property
+    def borrower_name(self):
+        """Decrypt name when reading"""
+        return decrypt_field(self._borrower_name) if self._borrower_name else None
+
+    @borrower_name.setter
+    def borrower_name(self, value):
+        """Encrypt name when writing"""
+        self._borrower_name = encrypt_field(value) if value else None
 
     # Loan details
     loan_type = Column(String(100), default="conventional")

@@ -22,6 +22,7 @@ import time
 
 # Import database models and functions
 from database import get_db, Loan, Document, init_database
+from encryption import encrypt_file, decrypt_file
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -346,8 +347,12 @@ async def upload_documents(
             safe_filename = sanitize_filename(file.filename)
             file_path = os.path.join(loan_dir, safe_filename)
 
+            # Save file
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
+
+            # Encrypt the file immediately after upload
+            encrypt_file(file_path)
 
             file_size = os.path.getsize(file_path)
 

@@ -909,4 +909,4 @@ Use UptimeRobot to ping this every 5 minutes.
 ## Identifying any red flags (need to test but this should be fixed)
 ## Calculate the total monthly income (need to test but this should be fixed)
 ## Fix the make problem
-## make a follow up scenerio
+## make a follow up scenerio (need to test nad run but its built)
