@@ -62,6 +62,26 @@ DOCUMENT_RETENTION_DAYS = 30
 # Audit log file
 AUDIT_LOG_FILE = "./audit_log.json"
 
+# IP Whitelisting (optional but recommended)
+# Set to empty list [] to disable IP whitelisting
+# Add your IPs here - get them from Make.com and Retool documentation
+ALLOWED_IPS = [
+    # Make.com webhook IPs (update with actual IPs from Make.com)
+    # You can find these in Make.com documentation
+    # Example: "34.89.123.456", "34.89.123.457"
+
+    # Retool IPs (update with actual IPs from Retool)
+    # You can find these in Retool settings
+    # Example: "52.72.123.456", "52.72.123.457"
+
+    # Your office/home IP (optional)
+    # Find yours at: https://whatismyipaddress.com/
+    # Example: "203.0.113.45"
+]
+
+# Set to True to enable IP whitelisting
+ENABLE_IP_WHITELIST = False  # Set to True when you add IPs above
+
 # ====================
 # MIDDLEWARE & SECURITY
 # ====================
@@ -113,6 +133,24 @@ def verify_api_key(x_api_key: str = Header(None)):
         )
 
     return x_api_key
+
+def check_ip_whitelist(request: Request):
+    """Check if request IP is whitelisted"""
+    if not ENABLE_IP_WHITELIST or not ALLOWED_IPS:
+        return  # IP whitelisting disabled
+
+    client_ip = request.client.host
+
+    # Check if IP is in whitelist
+    if client_ip not in ALLOWED_IPS:
+        audit_log("SECURITY", "IP_BLOCKED", {
+            "ip": client_ip,
+            "reason": "not_in_whitelist"
+        })
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. Your IP address is not authorized."
+        )
 
 def check_rate_limit(request: Request):
     """Simple rate limiting by IP address"""
@@ -331,6 +369,7 @@ async def upload_documents(
 ):
     """Upload loan documents (SECURED)"""
     # Security checks
+    check_ip_whitelist(request)  # Check IP first
     verify_api_key(api_key)
     check_rate_limit(request)
 
