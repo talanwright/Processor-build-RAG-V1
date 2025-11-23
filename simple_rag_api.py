@@ -362,6 +362,7 @@ async def root():
             "/upload-documents",
             "/analyze-loan",
             "/generate-email",
+            "/download-document/{loan_id}/{filename}",
             "/stats",
             "/loans",
             "/loans/{loan_id}",
@@ -836,6 +837,78 @@ Loan Processing Team"""
     except Exception as e:
         audit_log("ERROR", "EMAIL_GENERATION_FAILED", {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Email generation failed: {str(e)}")
+
+@app.get("/download-document/{loan_id}/{filename}")
+async def download_document(
+    loan_id: str,
+    filename: str,
+    request: Request,
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """Download and decrypt a document (SECURED)"""
+    # Security checks
+    verify_api_key(api_key)
+    check_rate_limit(request)
+
+    try:
+        # Sanitize inputs
+        safe_loan_id = sanitize_filename(loan_id)
+        safe_filename = sanitize_filename(filename)
+
+        # Verify loan exists
+        loan = db.query(Loan).filter(Loan.loan_id == safe_loan_id).first()
+        if not loan:
+            raise HTTPException(status_code=404, detail="Loan not found")
+
+        # Verify document exists in database
+        document = db.query(Document).filter(
+            Document.loan_id == safe_loan_id,
+            Document.filename == safe_filename
+        ).first()
+
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        # Check if file exists on disk
+        file_path = document.file_path
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Document file not found on server")
+
+        # Decrypt the file
+        from fastapi.responses import FileResponse
+        decrypted_data = decrypt_file(file_path)
+
+        # Create a temporary file with decrypted content
+        import tempfile
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(safe_filename)[1])
+        temp_file.write(decrypted_data)
+        temp_file.close()
+
+        # Audit log
+        audit_log("DATA_ACCESS", "DOWNLOAD", {
+            "loan_id": safe_loan_id,
+            "filename": safe_filename,
+            "ip": request.client.host
+        })
+
+        # Return file response
+        return FileResponse(
+            path=temp_file.name,
+            filename=safe_filename,
+            media_type="application/octet-stream",
+            background=None  # We'll clean up temp files separately
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        audit_log("ERROR", "DOWNLOAD_FAILED", {
+            "loan_id": loan_id,
+            "filename": filename,
+            "error": str(e)
+        })
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
 
 @app.get("/stats")
 async def get_system_stats(
