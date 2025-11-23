@@ -59,6 +59,10 @@ rate_limit_store = defaultdict(list)
 # Document retention (auto-delete after X days)
 DOCUMENT_RETENTION_DAYS = 30
 
+# File upload limits and restrictions
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
+ALLOWED_FILE_TYPES = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.txt', '.xls', '.xlsx']
+
 # Audit log file
 AUDIT_LOG_FILE = "./audit_log.json"
 
@@ -66,6 +70,14 @@ AUDIT_LOG_FILE = "./audit_log.json"
 # Set to empty list [] to disable IP whitelisting
 # Add your IPs here - get them from Make.com and Retool documentation
 ALLOWED_IPS = [
+    # Make.com IP address
+    "44.209.150.16",
+    "44.210.162.163",
+    "35.170.163.230",
+
+    # Retools IP address
+
+
     # Make.com webhook IPs (update with actual IPs from Make.com)
     # You can find these in Make.com documentation
     # Example: "34.89.123.456", "34.89.123.457"
@@ -354,8 +366,51 @@ async def root():
             "/loans",
             "/loans/{loan_id}",
             "/incomplete-loans",
-            "/update-reminder"
+            "/update-reminder",
+            "/health"
         ]
+    }
+
+@app.get("/health")
+async def health_check(db: Session = Depends(get_db)):
+    """Detailed health check endpoint for monitoring (PUBLIC - no auth required)"""
+    try:
+        # Test database connection
+        db.execute("SELECT 1")
+        db_status = "healthy"
+        db_error = None
+    except Exception as e:
+        db_status = "unhealthy"
+        db_error = str(e)
+
+    # Check upload directory
+    upload_dir_exists = os.path.exists(upload_dir)
+
+    return {
+        "status": "healthy" if db_status == "healthy" and upload_dir_exists else "degraded",
+        "timestamp": datetime.now().isoformat(),
+        "version": "3.0.0",
+        "components": {
+            "database": {
+                "status": db_status,
+                "type": "PostgreSQL",
+                "error": db_error
+            },
+            "storage": {
+                "status": "healthy" if upload_dir_exists else "unhealthy",
+                "upload_directory": upload_dir_exists
+            },
+            "api": {
+                "status": "healthy"
+            }
+        },
+        "security": {
+            "api_key_required": True,
+            "ip_whitelist_enabled": ENABLE_IP_WHITELIST,
+            "rate_limiting": f"{RATE_LIMIT_REQUESTS} requests per hour",
+            "file_size_limit": f"{MAX_FILE_SIZE // 1024 // 1024}MB",
+            "allowed_file_types": len(ALLOWED_FILE_TYPES)
+        }
     }
 
 @app.post("/upload-documents")
@@ -382,18 +437,47 @@ async def upload_documents(
         os.makedirs(loan_dir, exist_ok=True)
 
         for file in files:
+            # Validate file type
+            file_ext = os.path.splitext(file.filename)[1].lower()
+            if file_ext not in ALLOWED_FILE_TYPES:
+                audit_log("SECURITY", "BLOCKED_FILE_TYPE", {
+                    "filename": file.filename,
+                    "file_type": file_ext,
+                    "loan_id": safe_loan_id,
+                    "ip": request.client.host
+                })
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File type '{file_ext}' not allowed. Allowed types: {', '.join(ALLOWED_FILE_TYPES)}"
+                )
+
             # Sanitize filename
             safe_filename = sanitize_filename(file.filename)
             file_path = os.path.join(loan_dir, safe_filename)
 
-            # Save file
+            # Save file temporarily to check size
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
+            # Check file size
+            file_size = os.path.getsize(file_path)
+            if file_size > MAX_FILE_SIZE:
+                # Delete the file since it's too large
+                os.remove(file_path)
+                audit_log("SECURITY", "FILE_SIZE_EXCEEDED", {
+                    "filename": file.filename,
+                    "size_mb": round(file_size / 1024 / 1024, 2),
+                    "max_size_mb": round(MAX_FILE_SIZE / 1024 / 1024, 2),
+                    "loan_id": safe_loan_id,
+                    "ip": request.client.host
+                })
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File '{file.filename}' exceeds {MAX_FILE_SIZE // 1024 // 1024}MB limit (size: {round(file_size / 1024 / 1024, 2)}MB)"
+                )
+
             # Encrypt the file immediately after upload
             encrypt_file(file_path)
-
-            file_size = os.path.getsize(file_path)
 
             # Add to database
             document = Document(
