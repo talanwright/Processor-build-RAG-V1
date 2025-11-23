@@ -5,6 +5,7 @@ Implements: API Key Auth, Rate Limiting, CORS Restrictions, Audit Logging, Datab
 """
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Header, Request, Depends
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel
@@ -876,7 +877,6 @@ async def download_document(
             raise HTTPException(status_code=404, detail="Document file not found on server")
 
         # Decrypt the file
-        from fastapi.responses import FileResponse
         decrypted_data = decrypt_file(file_path)
 
         # Create a temporary file with decrypted content
