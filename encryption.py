@@ -83,11 +83,11 @@ def encrypt_file(file_path: str) -> bool:
         return False
 
 
-def decrypt_file(file_path: str, output_path: str = None) -> bool:
+def decrypt_file(file_path: str, output_path: str = None):
     """
     Decrypt a file
-    If output_path is None, decrypts in place
-    Returns True if successful
+    If output_path is provided, writes to that path and returns True/False
+    If output_path is None, returns the decrypted bytes
     """
     try:
         # Read encrypted file
@@ -97,15 +97,18 @@ def decrypt_file(file_path: str, output_path: str = None) -> bool:
         # Decrypt
         decrypted_data = fernet.decrypt(encrypted_data)
 
-        # Write to output
-        output = output_path if output_path else file_path
-        with open(output, 'wb') as f:
-            f.write(decrypted_data)
+        # If output path specified, write to file
+        if output_path:
+            with open(output_path, 'wb') as f:
+                f.write(decrypted_data)
+            return True
 
-        return True
+        # Otherwise return the decrypted bytes
+        return decrypted_data
+
     except Exception as e:
         print(f"File decryption error: {e}")
-        return False
+        return None
 
 
 def generate_encryption_key() -> str:
