@@ -667,6 +667,23 @@ async def generate_email(
     try:
         safe_loan_id = sanitize_filename(loan_id)
 
+        # Privacy footer for GLBA compliance
+        privacy_footer = """
+─────────────────────────────────────────────────────────────────
+PRIVACY NOTICE
+
+Your personal financial information is protected with industry-leading security
+including AES-128 encryption, access controls, and comprehensive audit logging.
+We do not sell your information to third parties.
+
+This message contains confidential information intended only for the recipient.
+If you received this in error, please delete it immediately and notify us.
+
+Questions about our privacy practices? Contact privacy@yourcompany.com
+
+For our complete privacy notice, visit: [YourWebsite]/privacy
+─────────────────────────────────────────────────────────────────"""
+
         if template_type == "missing_documents" and missing_documents:
             subject = "Additional Documentation Required - Loan Application"
             body = f"""Dear {borrower_name},
@@ -680,7 +697,8 @@ Please provide these documents as soon as possible to avoid delays in processing
 If you have any questions, please don't hesitate to contact us.
 
 Best regards,
-Loan Processing Team"""
+Loan Processing Team
+{privacy_footer}"""
         else:
             subject = "Loan Application Update"
             body = f"""Dear {borrower_name},
@@ -690,7 +708,8 @@ Thank you for your loan application. We have received your documents and are cur
 We will contact you if we need any additional information.
 
 Best regards,
-Loan Processing Team"""
+Loan Processing Team
+{privacy_footer}"""
 
         # Audit log
         audit_log("DATA_ACCESS", "EMAIL_GENERATED", {
