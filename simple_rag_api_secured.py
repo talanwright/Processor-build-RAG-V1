@@ -606,7 +606,9 @@ async def get_incomplete_loans(
 @app.post("/update-reminder")
 async def update_reminder_status(
     request: Request,
-    loan_id: str,
+    loan_id: str = Form(...),
+    borrower_email: str = Form(...),
+    files: Optional[List[UploadFile]] = File(None),
     api_key: str = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
