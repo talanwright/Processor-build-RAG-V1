@@ -39,7 +39,7 @@ app = FastAPI(
 # API Key from environment variable (CRITICAL!)
 API_KEY = os.getenv("API_KEY", "CHANGE_THIS_IN_PRODUCTION")  # Set in Railway!
 
-# Allowed origins for CORS (restrict to Make.com)
+# Allowed origins for CORS (Make.com and Retool)
 ALLOWED_ORIGINS = [
     "https://hook.us1.make.com",
     "https://hook.eu1.make.com",
@@ -47,7 +47,12 @@ ALLOWED_ORIGINS = [
     "https://us1.make.com",
     "https://eu1.make.com",
     "https://eu2.make.com",
+    # Allow all Retool domains
+    "https://*.retool.com",
 ]
+
+# For development: Allow all origins (comment out for production)
+ALLOW_ALL_ORIGINS = os.getenv("ALLOW_ALL_ORIGINS", "true").lower() == "true"
 
 # Rate limiting configuration
 RATE_LIMIT_REQUESTS = 100  # Max requests per window
@@ -78,10 +83,10 @@ AUDIT_LOG_FILE = "./audit_log.json"
 # MIDDLEWARE & SECURITY
 # ====================
 
-# Restrict CORS to only Make.com
+# CORS configuration - Allow Retool and Make.com
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,  # Only Make.com domains
+    allow_origins=["*"] if ALLOW_ALL_ORIGINS else ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["POST", "GET"],  # Only necessary methods
     allow_headers=["Content-Type", "X-API-Key"],  # Only necessary headers
@@ -90,7 +95,7 @@ app.add_middleware(
 # Trusted host middleware (prevent host header attacks)
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*.railway.app", "*.up.railway.app", "localhost"]
+    allowed_hosts=["*.railway.app", "*.up.railway.app", "*.onrender.com", "localhost"]
 )
 
 # Initialize upload directory

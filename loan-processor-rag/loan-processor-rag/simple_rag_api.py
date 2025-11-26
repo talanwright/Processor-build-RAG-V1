@@ -108,7 +108,13 @@ os.makedirs(upload_dir, exist_ok=True)
 
 def verify_api_key(x_api_key: str = Header(None)):
     """Verify API key from request header"""
+    # DEBUG: Log what we're receiving
+    print(f"🔍 DEBUG - Received API Key: {x_api_key}")
+    print(f"🔍 DEBUG - Expected API Key: {API_KEY}")
+    print(f"🔍 DEBUG - API Key match: {x_api_key == API_KEY}")
+
     if not x_api_key:
+        print("❌ DEBUG - No API key provided")
         raise HTTPException(
             status_code=401,
             detail="Missing API key. Include 'X-API-Key' header."
@@ -116,12 +122,14 @@ def verify_api_key(x_api_key: str = Header(None)):
 
     if x_api_key != API_KEY:
         # Log failed authentication attempt
+        print(f"❌ DEBUG - API key mismatch! Got: '{x_api_key}', Expected: '{API_KEY}'")
         audit_log("SECURITY", "FAILED_AUTH", {"attempted_key": x_api_key[:8] + "..."})
         raise HTTPException(
             status_code=403,
             detail="Invalid API key"
         )
 
+    print("✅ DEBUG - API key validated successfully")
     return x_api_key
 
 def check_rate_limit(request: Request):
