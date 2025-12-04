@@ -16,7 +16,7 @@ from encryption import encrypt_field, decrypt_field
 # Database URL from environment variable (Railway provides this automatically)
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://user:password@localhost:5432/loan_processor"
+    "sqlite:///./loan_processor.db"  # Use SQLite for local development
 )
 
 # Fix for Railway's postgres:// URLs (SQLAlchemy requires postgresql://)
@@ -24,7 +24,11 @@ if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # Create SQLAlchemy engine
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+# Use different settings for SQLite vs PostgreSQL
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
