@@ -22,7 +22,7 @@ from collections import defaultdict
 import time
 
 # Import database models and functions
-from database import get_db, Loan, Document, init_database
+from database import get_db, Loan, Document, AccessToken, init_database
 from encryption import encrypt_file, decrypt_file
 
 # Initialize FastAPI app
@@ -235,6 +235,29 @@ def cleanup_old_documents():
 
     return deleted_count
 
+def generate_secure_token(loan_id: str, db: Session, expiry_hours: int = None) -> str:
+    """Generate a secure access token for a loan"""
+    # Generate a cryptographically secure random token
+    token = secrets.token_urlsafe(32)
+
+    # Calculate expiration time (None = no expiration, or set far future date)
+    if expiry_hours is None:
+        # Set to 100 years in the future (effectively no expiration)
+        expires_at = datetime.utcnow() + timedelta(days=365 * 100)
+    else:
+        expires_at = datetime.utcnow() + timedelta(hours=expiry_hours)
+
+    # Create access token record
+    access_token = AccessToken(
+        token=token,
+        loan_id=loan_id,
+        expires_at=expires_at
+    )
+    db.add(access_token)
+    db.commit()
+
+    return token
+
 # ====================
 # PYDANTIC MODELS
 # ====================
@@ -356,7 +379,7 @@ async def root():
         "message": "Loan Processor RAG API (SECURED with PostgreSQL)",
         "status": "running",
         "timestamp": datetime.now().isoformat(),
-        "version": "3.0.0",
+        "version": "3.1.0",
         "security": "API Key Required",
         "database": "PostgreSQL",
         "endpoints": [
@@ -369,7 +392,16 @@ async def root():
             "/loans/{loan_id}",
             "/incomplete-loans",
             "/update-reminder",
-            "/health"
+            "/health",
+            "/secure-loan/{token} (PUBLIC - no auth)",
+            "/secure-loan/{token}/download/{filename} (PUBLIC - no auth)",
+            "/revoke-token/{token}"
+        ],
+        "features": [
+            "Secure email links with permanent access",
+            "Token-based document access (no API key needed)",
+            "Encrypted file storage and transmission",
+            "Audit logging for all access"
         ]
     }
 
@@ -858,15 +890,29 @@ async def generate_email(
     missing_documents: List[str] = [],
     red_flags: List[Dict] = [],
     template_type: str = "missing_docs",
-    api_key: str = Header(None, alias="X-API-Key")
+    monthly_income: float = None,
+    completeness_score: float = None,
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
 ):
-    """Generate email content (SECURED)"""
+    """Generate email content with secure link (SECURED)"""
     # Security checks
     verify_api_key(api_key)
     check_rate_limit(request)
 
     try:
         safe_loan_id = sanitize_filename(loan_id)
+
+        # Generate secure access token
+        token = generate_secure_token(safe_loan_id, db)
+
+        # Get the base URL from environment or use Railway default
+        base_url = os.getenv("BASE_URL", "https://your-railway-app.up.railway.app")
+        secure_link = f"{base_url}/secure-loan/{token}"
+
+        # Format income if provided
+        income_text = f"${monthly_income:,.0f}" if monthly_income else "N/A"
+        completeness_text = f"{completeness_score:.0f}%" if completeness_score is not None else "N/A"
 
         if template_type == "missing_documents" and missing_documents:
             subject = "Additional Documentation Required - Loan Application"
@@ -883,12 +929,17 @@ If you have any questions, please don't hesitate to contact us.
 Best regards,
 Loan Processing Team"""
         else:
-            subject = "Loan Application Update"
-            body = f"""Dear {borrower_name},
+            # Ready for review template with secure link
+            subject = f"Loan Ready for Review - {borrower_name}"
+            body = f"""A loan application is ready for your review.
 
-Thank you for your loan application. We have received your documents and are currently reviewing them.
+Borrower: {borrower_name}
+Monthly Income: {income_text}
+Completeness: {completeness_text}
 
-We will contact you if we need any additional information.
+🔒 View Secure Documents: {secure_link}
+
+This is a secure link that provides access to the loan application and all supporting documents.
 
 Best regards,
 Loan Processing Team"""
@@ -897,6 +948,7 @@ Loan Processing Team"""
         audit_log("DATA_ACCESS", "EMAIL_GENERATED", {
             "loan_id": safe_loan_id,
             "template_type": template_type,
+            "token_generated": True,
             "ip": request.client.host
         })
 
@@ -905,10 +957,13 @@ Loan Processing Team"""
             "email_subject": subject,
             "email_body": body,
             "template_type": template_type,
+            "secure_link": secure_link,
+            "token": token,
             "generated_timestamp": datetime.now().isoformat()
         }
 
     except Exception as e:
+        db.rollback()
         audit_log("ERROR", "EMAIL_GENERATION_FAILED", {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Email generation failed: {str(e)}")
 
@@ -1020,6 +1075,202 @@ async def get_audit_log(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Audit log retrieval failed: {str(e)}")
+
+@app.get("/secure-loan/{token}")
+async def secure_loan_access(
+    token: str,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Public endpoint for secure loan access via time-limited token (NO API KEY REQUIRED)"""
+    try:
+        # Find the access token
+        access_token = db.query(AccessToken).filter(AccessToken.token == token).first()
+
+        if not access_token:
+            raise HTTPException(status_code=404, detail="Invalid or expired link")
+
+        # Check if token is revoked
+        if access_token.is_revoked:
+            raise HTTPException(status_code=403, detail="This link has been revoked")
+
+        # Check if token is expired
+        if datetime.utcnow() > access_token.expires_at:
+            raise HTTPException(status_code=403, detail="This link has expired")
+
+        # Update access tracking
+        access_token.accessed_count += 1
+        access_token.last_accessed = datetime.utcnow()
+        db.commit()
+
+        # Get loan details
+        loan = db.query(Loan).filter(Loan.loan_id == access_token.loan_id).first()
+        if not loan:
+            raise HTTPException(status_code=404, detail="Loan not found")
+
+        # Get documents
+        documents = db.query(Document).filter(Document.loan_id == loan.loan_id).all()
+
+        # Audit log (without sensitive data)
+        audit_log("SECURE_ACCESS", "TOKEN_USED", {
+            "loan_id": loan.loan_id,
+            "token": token[:8] + "...",
+            "access_count": access_token.accessed_count,
+            "ip": request.client.host
+        })
+
+        # Calculate time remaining (check if effectively permanent)
+        time_remaining = access_token.expires_at - datetime.utcnow()
+        hours_remaining = time_remaining.total_seconds() / 3600
+
+        # If expiration is more than 10 years away, consider it permanent
+        is_permanent = time_remaining.days > 3650
+
+        # Return loan information
+        return {
+            "loan": {
+                "loan_id": loan.loan_id,
+                "borrower_name": loan.borrower_name,
+                "loan_type": loan.loan_type,
+                "status": loan.status,
+                "completeness_score": loan.completeness_score,
+                "risk_score": loan.risk_score,
+                "document_count": loan.document_count,
+                "missing_documents": json.loads(loan.missing_documents) if loan.missing_documents else [],
+                "created_date": loan.created_date.isoformat() if loan.created_date else None,
+                "last_updated": loan.last_updated.isoformat() if loan.last_updated else None
+            },
+            "documents": [
+                {
+                    "filename": doc.filename,
+                    "file_size": doc.file_size,
+                    "upload_date": doc.upload_date.isoformat() if doc.upload_date else None,
+                    "download_url": f"/secure-loan/{token}/download/{doc.filename}"
+                }
+                for doc in documents
+            ],
+            "access_info": {
+                "expires_at": "Never" if is_permanent else access_token.expires_at.isoformat(),
+                "hours_remaining": "Unlimited" if is_permanent else round(hours_remaining, 1),
+                "access_count": access_token.accessed_count,
+                "permanent_access": is_permanent
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        audit_log("ERROR", "SECURE_ACCESS_FAILED", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Failed to access loan: {str(e)}")
+
+@app.get("/secure-loan/{token}/download/{filename}")
+async def secure_download_document(
+    token: str,
+    filename: str,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Download document via secure token (NO API KEY REQUIRED)"""
+    try:
+        # Verify token
+        access_token = db.query(AccessToken).filter(AccessToken.token == token).first()
+
+        if not access_token:
+            raise HTTPException(status_code=404, detail="Invalid or expired link")
+
+        if access_token.is_revoked:
+            raise HTTPException(status_code=403, detail="This link has been revoked")
+
+        if datetime.utcnow() > access_token.expires_at:
+            raise HTTPException(status_code=403, detail="This link has expired")
+
+        # Sanitize filename
+        safe_filename = sanitize_filename(filename)
+
+        # Get document
+        document = db.query(Document).filter(
+            Document.loan_id == access_token.loan_id,
+            Document.filename == safe_filename
+        ).first()
+
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        # Check if file exists
+        if not os.path.exists(document.file_path):
+            raise HTTPException(status_code=404, detail="Document file not found on server")
+
+        # Decrypt file
+        decrypted_data = decrypt_file(document.file_path)
+
+        # Create temporary file
+        import tempfile
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(safe_filename)[1])
+        temp_file.write(decrypted_data)
+        temp_file.close()
+
+        # Audit log
+        audit_log("SECURE_ACCESS", "DOCUMENT_DOWNLOAD", {
+            "loan_id": access_token.loan_id,
+            "filename": safe_filename,
+            "token": token[:8] + "...",
+            "ip": request.client.host
+        })
+
+        # Return file
+        return FileResponse(
+            path=temp_file.name,
+            filename=safe_filename,
+            media_type="application/octet-stream"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        audit_log("ERROR", "SECURE_DOWNLOAD_FAILED", {
+            "filename": filename,
+            "error": str(e)
+        })
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
+
+@app.post("/revoke-token/{token}")
+async def revoke_access_token(
+    token: str,
+    request: Request,
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """Revoke a secure access token (ADMIN ONLY)"""
+    verify_api_key(api_key)
+
+    try:
+        access_token = db.query(AccessToken).filter(AccessToken.token == token).first()
+
+        if not access_token:
+            raise HTTPException(status_code=404, detail="Token not found")
+
+        # Revoke the token
+        access_token.is_revoked = 1
+        db.commit()
+
+        audit_log("SECURITY", "TOKEN_REVOKED", {
+            "token": token[:8] + "...",
+            "loan_id": access_token.loan_id,
+            "ip": request.client.host
+        })
+
+        return {
+            "success": True,
+            "token": token[:8] + "...",
+            "loan_id": access_token.loan_id,
+            "message": "Token revoked successfully"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to revoke token: {str(e)}")
 
 if __name__ == "__main__":
     print("🔒 Starting SECURED Loan Processor RAG API with PostgreSQL...")
