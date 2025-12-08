@@ -957,6 +957,48 @@ async def get_system_stats(
         audit_log("ERROR", "STATS_FAILED", {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Stats retrieval failed: {str(e)}")
 
+@app.delete("/clear-all-data")
+async def clear_all_data(
+    request: Request,
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """Clear all loans and documents from database (ADMIN ONLY - BE CAREFUL!)"""
+    verify_api_key(api_key)
+
+    try:
+        # Delete all documents first (foreign key constraint)
+        deleted_docs = db.query(Document).delete()
+
+        # Delete all loans
+        deleted_loans = db.query(Loan).delete()
+
+        db.commit()
+
+        # Also delete uploaded files from disk
+        if os.path.exists(upload_dir):
+            for item in os.listdir(upload_dir):
+                item_path = os.path.join(upload_dir, item)
+                if os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
+
+        audit_log("DATA_MANAGEMENT", "CLEAR_ALL", {
+            "documents_deleted": deleted_docs,
+            "loans_deleted": deleted_loans,
+            "ip": request.client.host
+        })
+
+        return {
+            "success": True,
+            "documents_deleted": deleted_docs,
+            "loans_deleted": deleted_loans,
+            "message": "All data cleared successfully"
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to clear data: {str(e)}")
+
 @app.get("/audit-log")
 async def get_audit_log(
     request: Request,
