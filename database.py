@@ -126,6 +126,27 @@ class Document(Base):
         return f"<Document(loan_id='{self.loan_id}', filename='{self.filename}')>"
 
 
+class AccessToken(Base):
+    """Secure access tokens for loan officer access (no expiration)"""
+    __tablename__ = "access_tokens"
+
+    # Primary fields
+    token = Column(String(255), primary_key=True, index=True)
+    loan_id = Column(String(255), index=True, nullable=False)
+
+    # Token metadata
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    accessed_count = Column(Integer, default=0)
+    last_accessed = Column(DateTime, nullable=True)
+
+    # Token revocation
+    is_revoked = Column(Integer, default=0)  # 0 = active, 1 = revoked
+
+    def __repr__(self):
+        return f"<AccessToken(token='{self.token[:8]}...', loan_id='{self.loan_id}', expires={self.expires_at})>"
+
+
 # ====================
 # DATABASE FUNCTIONS
 # ====================
