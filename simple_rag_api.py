@@ -453,10 +453,11 @@ async def upload_documents(
     files: List[UploadFile] = File(...),
     loan_id: str = Form(...),
     borrower_email: str = Form(None),
+    access_password: str = Form(None),  # NEW: Optional password for document access
     api_key: str = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
-    """Upload loan documents (SECURED)"""
+    """Upload loan documents (SECURED with optional password protection)"""
     # Security checks
     check_ip_whitelist(request)  # Check IP first
     verify_api_key(api_key)
@@ -536,10 +537,16 @@ async def upload_documents(
                 borrower_email=borrower_email,
                 document_count=len(uploaded_files)
             )
+            # Set password if provided
+            if access_password:
+                loan.access_password = access_password
             db.add(loan)
         else:
             loan.document_count = db.query(Document).filter(Document.loan_id == safe_loan_id).count()
             loan.last_updated = datetime.utcnow()
+            # Update password if provided
+            if access_password:
+                loan.access_password = access_password
 
         db.commit()
 
@@ -675,11 +682,12 @@ async def get_all_loans(
 async def download_document(
     loan_id: str,
     filename: str,
+    password: str,  # NEW: Required password parameter
     request: Request,
     api_key: str = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
-    """Download and decrypt a document (SECURED)"""
+    """Download and decrypt a document (SECURED with PASSWORD)"""
     # Security checks
     verify_api_key(api_key)
     check_rate_limit(request)
@@ -693,6 +701,20 @@ async def download_document(
         loan = db.query(Loan).filter(Loan.loan_id == safe_loan_id).first()
         if not loan:
             raise HTTPException(status_code=404, detail="Loan not found")
+
+        # NEW: Verify password
+        if not loan.access_password:
+            raise HTTPException(status_code=403, detail="Access password not set for this loan")
+
+        if loan.access_password != password:
+            # Log failed attempt
+            audit_log("SECURITY", "DOWNLOAD_FAILED_AUTH", {
+                "loan_id": safe_loan_id,
+                "filename": safe_filename,
+                "ip": request.client.host,
+                "reason": "invalid_password"
+            })
+            raise HTTPException(status_code=403, detail="Invalid access password")
 
         # Verify document exists in database
         document = db.query(Document).filter(
@@ -881,6 +903,50 @@ async def update_reminder_status(
         db.rollback()
         audit_log("ERROR", "UPDATE_REMINDER_FAILED", {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Failed to update reminder status: {str(e)}")
+
+@app.post("/set-access-password")
+async def set_access_password(
+    request: Request,
+    loan_id: str = Form(...),
+    access_password: str = Form(...),
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """Set or update the access password for a loan's documents"""
+    verify_api_key(api_key)
+    check_rate_limit(request)
+
+    try:
+        loan = db.query(Loan).filter(Loan.loan_id == loan_id).first()
+        if not loan:
+            raise HTTPException(status_code=404, detail="Loan not found")
+
+        # Update password
+        loan.access_password = access_password
+        loan.last_updated = datetime.utcnow()
+
+        db.commit()
+
+        # Audit log (don't log the actual password)
+        audit_log("SECURITY", "PASSWORD_SET", {
+            "loan_id": loan_id,
+            "ip": request.client.host,
+            "action": "password_updated" if loan.access_password else "password_created"
+        })
+
+        return {
+            "loan_id": loan_id,
+            "success": True,
+            "message": "Access password set successfully",
+            "password_set": True
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        audit_log("ERROR", "SET_PASSWORD_FAILED", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Failed to set access password: {str(e)}")
 
 @app.post("/generate-email")
 async def generate_email(
