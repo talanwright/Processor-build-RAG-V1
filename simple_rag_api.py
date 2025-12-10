@@ -417,6 +417,43 @@ async def init_db_tables():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database initialization failed: {str(e)}")
 
+@app.get("/migrate-db")
+async def migrate_database(db: Session = Depends(get_db)):
+    """Add missing columns to existing tables (PUBLIC - for schema updates)"""
+    try:
+        from sqlalchemy import text
+
+        # Check if access_password column exists
+        result = db.execute(text("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name='loans' AND column_name='access_password'
+        """))
+
+        if result.fetchone():
+            return {
+                "success": True,
+                "message": "access_password column already exists",
+                "action": "none"
+            }
+
+        # Add the missing column
+        db.execute(text("""
+            ALTER TABLE loans
+            ADD COLUMN access_password TEXT
+        """))
+        db.commit()
+
+        return {
+            "success": True,
+            "message": "access_password column added successfully",
+            "action": "column_added",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
+
 @app.get("/health")
 async def health_check(db: Session = Depends(get_db)):
     """Detailed health check endpoint for monitoring (PUBLIC - no auth required)"""
