@@ -997,16 +997,21 @@ async def set_access_password(
         audit_log("ERROR", "SET_PASSWORD_FAILED", {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Failed to set access password: {str(e)}")
 
+class SecureLinkRequest(BaseModel):
+    loan_id: str
+
 @app.post("/generate-secure-link")
 async def generate_secure_link_only(
+    link_request: SecureLinkRequest,
     request: Request,
-    loan_id: str,
     api_key: str = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
     """Generate ONLY a secure link for a loan (no email content)"""
     verify_api_key(api_key)
     check_rate_limit(request)
+
+    loan_id = link_request.loan_id
 
     try:
         safe_loan_id = sanitize_filename(loan_id)
