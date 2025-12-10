@@ -375,7 +375,7 @@ async def root():
         "message": "Loan Processor RAG API (SECURED with PostgreSQL)",
         "status": "running",
         "timestamp": datetime.now().isoformat(),
-        "version": "3.3.0",
+        "version": "3.3.1",
         "security": "API Key + Secure Tokens for Loan Officer Access",
         "database": "PostgreSQL",
         "endpoints": [
