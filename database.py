@@ -49,6 +49,7 @@ class Loan(Base):
     _borrower_email = Column("borrower_email", Text, nullable=False)  # Encrypted
     _borrower_name = Column("borrower_name", Text, nullable=True)  # Encrypted
     _access_password = Column("access_password", Text, nullable=True)  # Encrypted 6-digit PIN
+    _monthly_income = Column("monthly_income", Text, nullable=True)  # Encrypted monthly income
 
     # Encrypted field properties with automatic encryption/decryption
     @hybrid_property
@@ -80,6 +81,19 @@ class Loan(Base):
     def access_password(self, value):
         """Encrypt password when writing"""
         self._access_password = encrypt_field(value) if value else None
+
+    @hybrid_property
+    def monthly_income(self):
+        """Decrypt monthly income when reading"""
+        if self._monthly_income:
+            decrypted = decrypt_field(self._monthly_income)
+            return float(decrypted) if decrypted else None
+        return None
+
+    @monthly_income.setter
+    def monthly_income(self, value):
+        """Encrypt monthly income when writing"""
+        self._monthly_income = encrypt_field(str(value)) if value is not None else None
 
     # Loan details
     loan_type = Column(String(100), default="conventional")

@@ -26,6 +26,16 @@ import time
 from database import get_db, Loan, Document, AccessToken, init_database
 from encryption import encrypt_file, decrypt_file
 
+# Import document extractor for income calculation
+try:
+    import sys
+    sys.path.insert(0, os.path.dirname(__file__))
+    from document_extractor import extractor as document_extractor
+    EXTRACTOR_AVAILABLE = True
+except ImportError:
+    EXTRACTOR_AVAILABLE = False
+    print("⚠️  Document extractor not available - income calculation will be skipped")
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Loan Processor RAG API (SECURED with DB)",
@@ -427,6 +437,8 @@ async def migrate_database(db: Session = Depends(get_db)):
     try:
         from sqlalchemy import text
 
+        columns_added = []
+
         # Check if access_password column exists
         result = db.execute(text("""
             SELECT column_name
@@ -434,26 +446,46 @@ async def migrate_database(db: Session = Depends(get_db)):
             WHERE table_name='loans' AND column_name='access_password'
         """))
 
-        if result.fetchone():
-            return {
-                "success": True,
-                "message": "access_password column already exists",
-                "action": "none"
-            }
+        if not result.fetchone():
+            # Add the missing column
+            db.execute(text("""
+                ALTER TABLE loans
+                ADD COLUMN access_password TEXT
+            """))
+            columns_added.append("access_password")
 
-        # Add the missing column
-        db.execute(text("""
-            ALTER TABLE loans
-            ADD COLUMN access_password TEXT
+        # Check if monthly_income column exists
+        result = db.execute(text("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name='loans' AND column_name='monthly_income'
         """))
+
+        if not result.fetchone():
+            # Add the missing column
+            db.execute(text("""
+                ALTER TABLE loans
+                ADD COLUMN monthly_income TEXT
+            """))
+            columns_added.append("monthly_income")
+
         db.commit()
 
-        return {
-            "success": True,
-            "message": "access_password column added successfully",
-            "action": "column_added",
-            "timestamp": datetime.now().isoformat()
-        }
+        if columns_added:
+            return {
+                "success": True,
+                "message": f"Columns added successfully: {', '.join(columns_added)}",
+                "action": "columns_added",
+                "columns": columns_added,
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            return {
+                "success": True,
+                "message": "All columns already exist",
+                "action": "none",
+                "timestamp": datetime.now().isoformat()
+            }
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
@@ -657,6 +689,37 @@ async def analyze_loan(
 
         analysis_result = analyze_loan_simple(loan_data)
 
+        # Calculate monthly income from documents if extractor is available
+        monthly_income = None
+        if EXTRACTOR_AVAILABLE:
+            try:
+                loan_dir = os.path.join(upload_dir, safe_loan_id)
+                if os.path.exists(loan_dir):
+                    # Get list of documents for this loan
+                    db_documents = db.query(Document).filter(Document.loan_id == safe_loan_id).all()
+                    doc_list = [{"filename": doc.filename} for doc in db_documents]
+
+                    # Extract income from documents
+                    income_analysis = document_extractor.analyze_documents(loan_dir, doc_list)
+                    monthly_income = income_analysis.get('total_monthly_income', 0)
+
+                    # Add income breakdown and red flags to analysis result
+                    analysis_result['monthly_income'] = monthly_income
+                    analysis_result['income_breakdown'] = income_analysis.get('income_breakdown', [])
+                    if income_analysis.get('red_flags'):
+                        analysis_result['red_flags'].extend(income_analysis['red_flags'])
+
+                    audit_log("INCOME_CALCULATION", "SUCCESS", {
+                        "loan_id": safe_loan_id,
+                        "monthly_income": monthly_income,
+                        "confidence": income_analysis.get('confidence', 'unknown')
+                    })
+            except Exception as e:
+                audit_log("ERROR", "INCOME_CALCULATION_FAILED", {
+                    "loan_id": safe_loan_id,
+                    "error": str(e)
+                })
+
         # Update loan in database
         loan = db.query(Loan).filter(Loan.loan_id == safe_loan_id).first()
         if not loan:
@@ -675,6 +738,10 @@ async def analyze_loan(
         loan.missing_documents = json.dumps(analysis_result['missing_docs_list'])
         loan.document_count = len(loan_request.documents)
         loan.last_updated = datetime.utcnow()
+
+        # Store calculated monthly income (encrypted automatically)
+        if monthly_income and monthly_income > 0:
+            loan.monthly_income = monthly_income
 
         db.commit()
 
@@ -1312,6 +1379,7 @@ async def secure_loan_access(
                 "completeness_score": loan.completeness_score or 0,
                 "risk_score": loan.risk_score or 0,
                 "document_count": loan.document_count,
+                "monthly_income": loan.monthly_income,
                 "created_date": loan.created_date.isoformat() if loan.created_date else None,
                 "last_updated": loan.last_updated.isoformat() if loan.last_updated else None
             },

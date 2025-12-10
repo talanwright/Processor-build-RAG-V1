@@ -253,6 +253,16 @@
                         <div class="info-value">{{ loan.borrower_email or 'N/A' }}</div>
                     </div>
                     <div class="info-item">
+                        <div class="info-label">Monthly Income</div>
+                        <div class="info-value">
+                            {% if loan.monthly_income %}
+                                ${{ "{:,.2f}".format(loan.monthly_income) }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="info-item">
                         <div class="info-label">Loan ID</div>
                         <div class="info-value">{{ loan.loan_id[:20] }}...</div>
                     </div>
