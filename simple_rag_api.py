@@ -997,6 +997,47 @@ async def set_access_password(
         audit_log("ERROR", "SET_PASSWORD_FAILED", {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Failed to set access password: {str(e)}")
 
+@app.post("/generate-secure-link")
+async def generate_secure_link_only(
+    request: Request,
+    loan_id: str,
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """Generate ONLY a secure link for a loan (no email content)"""
+    verify_api_key(api_key)
+    check_rate_limit(request)
+
+    try:
+        safe_loan_id = sanitize_filename(loan_id)
+
+        # Generate secure access token
+        token = generate_secure_token(safe_loan_id, db)
+
+        # Get the base URL from environment
+        base_url = os.getenv("BASE_URL", "https://web-production-0a9f4.up.railway.app")
+        secure_link = f"{base_url}/secure-loan/{token}"
+
+        # Audit log
+        audit_log("SECURITY", "SECURE_LINK_GENERATED", {
+            "loan_id": safe_loan_id,
+            "token": token[:8] + "...",
+            "ip": request.client.host
+        })
+
+        return {
+            "loan_id": safe_loan_id,
+            "secure_link": secure_link,
+            "token": token,
+            "expires": "Never (100 years)",
+            "generated_timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        db.rollback()
+        audit_log("ERROR", "SECURE_LINK_GENERATION_FAILED", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Secure link generation failed: {str(e)}")
+
 @app.post("/generate-email")
 async def generate_email(
     request: Request,
