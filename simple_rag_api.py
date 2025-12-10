@@ -5,9 +5,10 @@ Implements: API Key Auth, Rate Limiting, CORS Restrictions, Audit Logging, Datab
 """
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Header, Request, Depends
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
@@ -32,6 +33,9 @@ app = FastAPI(
     docs_url=None,  # Disabled for production
     redoc_url=None  # Disabled for production
 )
+
+# Set up templates
+templates = Jinja2Templates(directory="templates")
 
 # ====================
 # SECURITY CONFIGURATION
@@ -1239,7 +1243,7 @@ async def get_audit_log(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Audit log retrieval failed: {str(e)}")
 
-@app.get("/secure-loan/{token}")
+@app.get("/secure-loan/{token}", response_class=HTMLResponse)
 async def secure_loan_access(
     token: str,
     request: Request,
@@ -1282,36 +1286,44 @@ async def secure_loan_access(
             "ip": request.client.host
         })
 
-        # Return loan information
-        return {
+        # Parse missing documents
+        missing_documents = json.loads(loan.missing_documents) if loan.missing_documents else []
+
+        # Prepare document list with download URLs
+        document_list = [
+            {
+                "filename": doc.filename,
+                "file_size": doc.file_size,
+                "upload_date": doc.upload_date.isoformat() if doc.upload_date else None,
+                "download_url": f"/secure-loan/{token}/download/{doc.filename}"
+            }
+            for doc in documents
+        ]
+
+        # Return HTML response
+        return templates.TemplateResponse("loan_view.html", {
+            "request": request,
             "loan": {
                 "loan_id": loan.loan_id,
                 "borrower_name": loan.borrower_name,
                 "borrower_email": loan.borrower_email,
                 "loan_type": loan.loan_type,
                 "status": loan.status,
-                "completeness_score": loan.completeness_score,
-                "risk_score": loan.risk_score,
+                "completeness_score": loan.completeness_score or 0,
+                "risk_score": loan.risk_score or 0,
                 "document_count": loan.document_count,
-                "missing_documents": json.loads(loan.missing_documents) if loan.missing_documents else [],
                 "created_date": loan.created_date.isoformat() if loan.created_date else None,
                 "last_updated": loan.last_updated.isoformat() if loan.last_updated else None
             },
-            "documents": [
-                {
-                    "filename": doc.filename,
-                    "file_size": doc.file_size,
-                    "upload_date": doc.upload_date.isoformat() if doc.upload_date else None,
-                    "download_url": f"/secure-loan/{token}/download/{doc.filename}"
-                }
-                for doc in documents
-            ],
+            "missing_documents": missing_documents,
+            "documents": document_list,
             "access_info": {
                 "expires_at": "Never (100 years)",
                 "access_count": access_token.accessed_count,
-                "permanent_access": True
+                "permanent_access": True,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
-        }
+        })
 
     except HTTPException:
         raise
