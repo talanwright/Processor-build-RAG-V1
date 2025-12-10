@@ -404,6 +404,19 @@ async def root():
         ]
     }
 
+@app.get("/init-db")
+async def init_db_tables():
+    """Initialize database tables (PUBLIC - for deployment setup)"""
+    try:
+        init_database()
+        return {
+            "success": True,
+            "message": "Database tables initialized successfully",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database initialization failed: {str(e)}")
+
 @app.get("/health")
 async def health_check(db: Session = Depends(get_db)):
     """Detailed health check endpoint for monitoring (PUBLIC - no auth required)"""
