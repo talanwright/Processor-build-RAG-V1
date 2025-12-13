@@ -72,7 +72,9 @@ RATE_LIMIT_WINDOW = 3600  # Time window in seconds (1 hour)
 rate_limit_store = defaultdict(list)
 
 # Document retention (auto-delete after X days)
-DOCUMENT_RETENTION_DAYS = 30
+# 7 years = 2555 days (complies with federal lending regulations)
+# FHA loans technically require life-of-loan + 2 years, but 7 years meets most requirements
+DOCUMENT_RETENTION_DAYS = 2555
 
 # File upload limits and restrictions
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB in bytes

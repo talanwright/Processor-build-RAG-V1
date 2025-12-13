@@ -599,3 +599,8 @@ Review the full documents:
 
   ## download button and read the security
   ## Make sure this doesn't delete after 30 days, and follows the GLBA time line
+
+  ## By submitting your loan application, you authorize us to collect and review your financial information including
+   ## income, employment, and credit data for the purpose of evaluating your loan application. We use automated 
+  ## systems to extract necessary information from your documents. All data is encrypted and securely stored. We will 
+  ## not share your information with third parties except as required for loan processing or by law.

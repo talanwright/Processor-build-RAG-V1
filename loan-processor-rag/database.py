@@ -48,6 +48,8 @@ class Loan(Base):
     loan_id = Column(String(255), primary_key=True, index=True)
     _borrower_email = Column("borrower_email", Text, nullable=False)  # Encrypted
     _borrower_name = Column("borrower_name", Text, nullable=True)  # Encrypted
+    _access_password = Column("access_password", Text, nullable=True)  # Encrypted 6-digit PIN
+    _monthly_income = Column("monthly_income", Text, nullable=True)  # Encrypted monthly income
 
     # Encrypted field properties with automatic encryption/decryption
     @hybrid_property
@@ -69,6 +71,29 @@ class Loan(Base):
     def borrower_name(self, value):
         """Encrypt name when writing"""
         self._borrower_name = encrypt_field(value) if value else None
+
+    @hybrid_property
+    def access_password(self):
+        """Decrypt password when reading"""
+        return decrypt_field(self._access_password) if self._access_password else None
+
+    @access_password.setter
+    def access_password(self, value):
+        """Encrypt password when writing"""
+        self._access_password = encrypt_field(value) if value else None
+
+    @hybrid_property
+    def monthly_income(self):
+        """Decrypt monthly income when reading"""
+        if self._monthly_income:
+            decrypted = decrypt_field(self._monthly_income)
+            return float(decrypted) if decrypted else None
+        return None
+
+    @monthly_income.setter
+    def monthly_income(self, value):
+        """Encrypt monthly income when writing"""
+        self._monthly_income = encrypt_field(str(value)) if value is not None else None
 
     # Loan details
     loan_type = Column(String(100), default="conventional")
@@ -113,6 +138,27 @@ class Document(Base):
 
     def __repr__(self):
         return f"<Document(loan_id='{self.loan_id}', filename='{self.filename}')>"
+
+
+class AccessToken(Base):
+    """Secure access tokens for loan officer access (no expiration)"""
+    __tablename__ = "access_tokens"
+
+    # Primary fields
+    token = Column(String(255), primary_key=True, index=True)
+    loan_id = Column(String(255), index=True, nullable=False)
+
+    # Token metadata
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    accessed_count = Column(Integer, default=0)
+    last_accessed = Column(DateTime, nullable=True)
+
+    # Token revocation
+    is_revoked = Column(Integer, default=0)  # 0 = active, 1 = revoked
+
+    def __repr__(self):
+        return f"<AccessToken(token='{self.token[:8]}...', loan_id='{self.loan_id}', expires={self.expires_at})>"
 
 
 # ====================

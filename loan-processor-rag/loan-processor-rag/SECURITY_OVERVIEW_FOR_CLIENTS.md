@@ -349,7 +349,7 @@ We follow data minimization principles - we only keep what's necessary.
 **A:**
 **Current status:** We implement technical security controls required by GLBA (encryption, access control, audit logging).
 
-**Not yet complete:** Formal compliance documentation, risk assessments.
+**Not yet complete:** Formal compliance documentation, risk assessments, and third-party audits. These would be needed for working with banks or large financial institutions.
 
 **Recommendation:** Suitable for small/medium lending businesses. For banks or enterprise clients, we would need to complete formal compliance certification.
 

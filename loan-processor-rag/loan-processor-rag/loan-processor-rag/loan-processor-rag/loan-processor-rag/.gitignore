@@ -46,6 +46,13 @@ Thumbs.db
 uploads/
 vector_db/
 *.log
+audit_log.json
+audit_log*.json
+
+# Environment variables (CRITICAL - NEVER COMMIT!)
+.env
+.env.*
+*.env
 
 # Private instruction files
 instructions.md

@@ -1,0 +1,373 @@
+EMPLOYMENT VERIFICATION RED FLAGS
+
+OVERVIEW:
+Employment verification is critical to confirm income stability and repayment ability. Red flags in employment documentation can indicate fraud, income instability, or misrepresentation. Processors must carefully verify employment history, income consistency, and job stability.
+
+EMPLOYMENT HISTORY RED FLAGS:
+
+1. FREQUENT JOB CHANGES:
+- Multiple jobs in past 2 years without progression
+- Job changes resulting in income decreases
+- Gaps between jobs longer than 30 days
+- Different industries/fields without explanation
+- Job hopping pattern (less than 6 months per job)
+- Recent job change right before loan application
+
+2. EMPLOYMENT GAPS:
+- Unexplained gaps in employment history
+- Gaps longer than 30 days
+- Multiple gaps in 2-year history
+- Recent long-term unemployment
+- Gaps coinciding with legal/financial issues
+- Insufficient explanation for gaps
+
+3. INCONSISTENT EMPLOYMENT INFORMATION:
+- Job title differs between application and VOE
+- Employer name inconsistent across documents
+- Employment dates don't match between documents
+- Salary amount differs between sources
+- Job duties don't match stated position
+- Employer address different on various documents
+
+VERIFICATION OF EMPLOYMENT (VOE) RED FLAGS:
+
+1. DOCUMENT AUTHENTICITY ISSUES:
+- VOE on non-company letterhead
+- Generic email domains (Gmail, Yahoo) for employer contact
+- Phone number goes to voicemail/no answer
+- Phone number is borrower's cell phone
+- No company website or online presence
+- Recently created website (check domain registration)
+- P.O. Box as business address for non-applicable business type
+
+2. VOE CONTENT ISSUES:
+- Vague or incomplete information
+- Missing required elements (dates, salary, position)
+- Not signed by appropriate authority
+- Handwritten VOE (red flag for professional businesses)
+- Salary exactly matches what borrower needs
+- Future income increases promised
+- Start date very recent (less than 30 days)
+- Probability of continued employment qualified or conditional
+
+3. VERBAL VERIFICATION ISSUES:
+- Person verifying employment seems unfamiliar with borrower
+- Reluctant to provide information
+- Information contradicts written VOE
+- Cannot verify basic employment details
+- Claims to be HR but doesn't know company policies
+- Provides cell phone as only contact method
+
+PAYSTUB RED FLAGS:
+
+1. DOCUMENT TAMPERING:
+- Misaligned text or numbers
+- Different fonts on same document
+- White-out or corrections visible
+- Font inconsistencies
+- Pixelated numbers or text
+- Check stub not matching paystub
+- Tear pattern doesn't match authentic stubs
+- Perforations missing or irregular
+
+2. CALCULATION ERRORS:
+- Year-to-date totals don't match pay periods
+- Tax withholdings don't match income level
+- Deductions inconsistent with prior periods
+- Net pay calculation incorrect
+- Overtime/bonus not consistent with base pay
+- Social Security withholding doesn't match gross pay (6.2% up to max)
+- Medicare withholding incorrect (1.45% of gross)
+
+3. FORMAT ISSUES:
+- Generic template used (easily found online)
+- No company logo or identifying information
+- Employer identification number (EIN) missing or invalid
+- Address doesn't match known employer location
+- Pay period dates irregular
+- Check number sequence unusual
+- Professional company using handwritten paystubs
+
+4. INCOME INCONSISTENCIES:
+- Significant variance in pay between periods (without explanation)
+- Overtime pattern inconsistent
+- Bonus timing unusual
+- Tips/commission amounts too consistent
+- Income increasing significantly just before application
+- YTD earnings don't project to W-2 amounts
+
+W-2 RED FLAGS:
+
+1. DOCUMENT ISSUES:
+- Not on official IRS W-2 form
+- Missing employer information (EIN, address)
+- Box totals don't reconcile
+- Wages significantly different from paystubs
+- State withholding issues
+- Box 12 codes missing or incorrect
+- Social Security wages exceed Medicare wages (without pre-tax deductions)
+
+2. VERIFICATION ISSUES:
+- W-2 not matched to tax returns
+- Cannot verify employer through IRS
+- EIN invalid or doesn't match employer
+- Wage and Tax Statement doesn't match employer records
+- SSA-89 verification shows different wages
+
+3. CALCULATION RED FLAGS:
+- Federal withholding doesn't match income and filing status
+- State withholding incorrect for state rates
+- Social Security/Medicare amounts incorrect
+- Retirement contributions exceed IRS limits
+- Box 1 + Box 12 deductions doesn't equal Box 3/5
+
+TAX RETURN VERIFICATION RED FLAGS:
+
+1. INCOME INCONSISTENCIES:
+- W-2 wages on return don't match W-2 forms provided
+- Self-employment income doesn't match business records
+- Schedule C income pattern unusual
+- Significant income decline year-over-year without explanation
+- Income varies significantly between years
+- 1099 income not matching reported amounts
+
+2. SELF-EMPLOYMENT RED FLAGS:
+- Schedule C expenses excessive (over 50% of income)
+- Home office deduction exceeds reasonable amount
+- Vehicle expenses claim 100% business use
+- Meals and entertainment excessive
+- Travel expenses disproportionate to business type
+- Related party payments
+- Round numbers throughout (suggests estimates/fabrication)
+- Business type doesn't match stated occupation
+
+3. DOCUMENT AUTHENTICITY:
+- Returns not signed
+- Tax preparer information missing
+- IRS stamps missing (if applicable)
+- Returns appear self-prepared but claim preparer
+- Schedule formatting doesn't match IRS forms
+- Missing schedules referenced in return
+- 4506-C verification doesn't match provided returns
+
+EMPLOYER VERIFICATION RED FLAGS:
+
+1. BUSINESS LEGITIMACY CONCERNS:
+- No online presence or minimal web presence
+- Website recently created (check registration date)
+- Address is residential location
+- Phone number is residential or cell
+- Business license cannot be verified
+- No business listing in state records
+- No reviews or online mentions of business
+- Claims large operation but minimal footprint
+
+2. RELATED PARTY EMPLOYMENT:
+- Employer is family member
+- Borrower has ownership interest in company
+- Employer is friend or associate
+- Business recently formed (just before loan application)
+- Business address matches borrower's previous address
+- Payment records show cash payments only
+
+3. SHELL COMPANY INDICATORS:
+- Recently formed LLC or corporation
+- No business operations evident
+- No other employees traceable
+- No business activity (utility bills, advertising, etc.)
+- Mail drop or virtual office address
+- Minimal business expenses on tax returns
+- No vendor relationships or contracts
+
+INCOME CALCULATION RED FLAGS:
+
+1. OVERTIME/BONUS ISSUES:
+- Overtime income not consistent over 2 years
+- Recent significant increase in overtime
+- Bonus income only in recent months
+- Commission income declining trend
+- Variable income too high relative to base
+- No history of overtime but significant recent overtime
+
+2. MULTIPLE INCOME SOURCES:
+- Multiple part-time jobs for full-time income
+- Side business income inconsistent
+- Rental income not documented properly
+- Investment income declining or one-time
+- Alimony/child support ending soon
+- Government benefits reducing soon
+
+3. FUTURE INCOME ISSUES:
+- Relying on promised raise not yet effective
+- Bonus structure changing unfavorably
+- Contract work ending soon
+- Part-time becoming full-time without confirmation
+- Income increase contingent on future events
+- Probationary period not completed
+
+SPECIFIC OCCUPATION RED FLAGS:
+
+1. COMMISSIONED EMPLOYEES:
+- Recent hire with guaranteed draw
+- Commission structure not documented
+- Income declining trend
+- No history in commission sales
+- Draw against commission structure unclear
+- High variation month-to-month
+
+2. SELF-EMPLOYED BORROWERS:
+- Business less than 2 years old
+- Declining income trend
+- Excessive business deductions
+- Personal expenses claimed as business expenses
+- No business license or documentation
+- Cannot verify clients/customers
+- Cash business with minimal documentation
+
+3. SEASONAL EMPLOYEES:
+- Income only during specific months
+- No off-season employment
+- Relying on unemployment benefits
+- No history of returning to same employer
+- Recent start in seasonal work
+
+4. TIP INCOME EARNERS:
+- Tips significantly exceed reported income
+- Cash tips not properly documented
+- Significant variance from shift to shift
+- No verification from employer of tip income
+- Tips not matching industry standards
+
+5. GIGS/CONTRACT WORKERS:
+- Multiple platforms/apps for income
+- Recent start in gig work
+- Income declining
+- No business entity established
+- Tax reporting unclear (1099 vs W-2)
+- Cannot verify platform relationship
+
+VERIFICATION PROCESS RED FLAGS:
+
+1. BORROWER BEHAVIOR:
+- Defensive when asked for verification
+- Provides documents slowly or reluctantly
+- Changes story about employment
+- Provides different employer contact information
+- Claims employer is difficult to reach
+- Makes excuses for inconsistencies
+
+2. TIMING RED FLAGS:
+- Employment verification done too early (beyond 30 days before closing)
+- Delay in receiving verification
+- Multiple attempts needed to verify
+- Employer says borrower no longer employed
+- Recent termination discovered
+- Borrower on leave of absence not disclosed
+
+3. VERBAL VERIFICATION CONCERNS:
+- Person answering phone unfamiliar with business
+- No HR department for large company claim
+- Cannot verify basic business information
+- Reluctant to provide verification
+- Contradictory information given
+- Follow-up calls go unanswered
+
+CROSS-DOCUMENT VERIFICATION RED FLAGS:
+
+1. PAYSTUB VS W-2 MISMATCHES:
+- December paystub YTD doesn't project to W-2
+- Withholding patterns don't match
+- Employer information differs
+- Pay periods inconsistent
+
+2. VOE VS PAYSTUB MISMATCHES:
+- Salary amount differs
+- Job title differs
+- Employment dates differ
+- Employer address differs
+
+3. TAX RETURN VS CURRENT INCOME MISMATCHES:
+- Current income significantly higher than previous year
+- Cannot explain income increase
+- Job change not reflected properly
+- W-2s on return don't match current employer
+
+SPECIAL SITUATIONS RED FLAGS:
+
+1. RECENT GRADUATES:
+- No work history in field of study
+- Income not commensurate with education level
+- Student loans not accounted for
+- Job offer vs actual employment confusion
+
+2. CAREER CHANGERS:
+- Income not consistent with new field norms
+- Training/certification not documented
+- Prior experience not relevant
+- Probationary period concerns
+
+3. MILITARY PERSONNEL:
+- BAH/BAS not properly documented
+- Deployment affecting income
+- Separation date approaching
+- Income dependent on duty station
+
+4. FOREIGN NATIONALS:
+- Work authorization expiring
+- Visa status unclear
+- Employment authorization gaps
+- Income not verifiable in U.S. systems
+
+VERIFICATION BEST PRACTICES:
+
+1. STANDARD VERIFICATION:
+- Verbal VOE with employer (HR or supervisor)
+- Written VOE on company letterhead
+- Most recent 30 days paystubs
+- W-2s for most recent 2 years
+- Direct employer contact (look up number independently)
+
+2. ENHANCED VERIFICATION:
+- Call employer directly using publicly listed number
+- Verify employer legitimacy (state business records)
+- Check employer website and online presence
+- Request additional documentation if concerns exist
+- Use third-party verification services
+
+3. SELF-EMPLOYED VERIFICATION:
+- 2 years personal tax returns with schedules
+- 2 years business tax returns
+- Profit and loss statements (YTD)
+- Business license verification
+- CPA letter if applicable
+- Bank statements showing business deposits
+
+4. WHEN TO DECLINE:
+- Cannot verify employer legitimacy
+- Clear evidence of document tampering
+- Income cannot be verified through multiple sources
+- Borrower refuses additional verification
+- Related party employment without adequate documentation
+
+FRAUD REPORTING:
+
+1. SUSPECTED FRAUD INDICATORS:
+- Multiple fraud indicators present
+- Professional-level document forgery
+- Borrower admits to misrepresentation
+- Third-party involvement in fraud scheme
+- Pattern of fraud across multiple files
+
+2. REPORTING OBLIGATIONS:
+- File Suspicious Activity Report (SAR) if required
+- Report to lender's fraud department immediately
+- Decline loan application
+- Document all fraud indicators in file
+- Do not notify borrower of SAR filing
+
+3. DOCUMENTATION:
+- Maintain copies of all fraudulent documents
+- Document all verification attempts
+- Note all inconsistencies discovered
+- Preserve communications with borrower
+- Coordinate with fraud investigators

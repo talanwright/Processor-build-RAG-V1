@@ -8,16 +8,13 @@ __pycache__/
 dist/
 build/
 
-# Virtual environments
+# Virtual environments - THIS IS THE BIG ONE
 venv/
 env/
 ENV/
 .venv
 */venv/
 */env/
-
-# Nested directories
-loan-processor-rag/loan-processor-rag/
 
 # IDE
 .vscode/
@@ -31,14 +28,17 @@ Thumbs.db
 
 # Git
 .git/
+.gitignore
 
 # Logs
 *.log
 api.log
 audit_log.json
 
-# Uploads
+# Uploads and temporary files
 uploads/
+*/uploads/
+*.tmp
 
 # Documentation
 *.md
@@ -46,4 +46,10 @@ uploads/
 
 # Tests
 test_*.py
+*_test.py
 tests/
+*/tests/
+
+# Config
+config/
+*/config/

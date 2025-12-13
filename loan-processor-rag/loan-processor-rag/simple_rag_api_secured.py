@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-SECURED Loan Processor RAG API - Production Ready with Security
-Implements: API Key Auth, Rate Limiting, CORS Restrictions, Audit Logging
+SECURED Loan Processor RAG API - Production Ready with PostgreSQL Database
+Implements: API Key Auth, Rate Limiting, CORS Restrictions, Audit Logging, Database Tracking
 """
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Header, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Header, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
+from sqlalchemy.orm import Session
 import os
 import shutil
 import uvicorn
@@ -19,8 +20,16 @@ import hashlib
 from collections import defaultdict
 import time
 
+# Import database models and functions
+from database import get_db, Loan, Document, init_database
+
 # Initialize FastAPI app
-app = FastAPI(title="Loan Processor RAG API (SECURED)", version="2.0.0")
+app = FastAPI(
+    title="Loan Processor RAG API (SECURED with DB)",
+    version="3.0.0",
+    docs_url=None,  # Disabled for production
+    redoc_url=None  # Disabled for production
+)
 
 # ====================
 # SECURITY CONFIGURATION
@@ -29,7 +38,7 @@ app = FastAPI(title="Loan Processor RAG API (SECURED)", version="2.0.0")
 # API Key from environment variable (CRITICAL!)
 API_KEY = os.getenv("API_KEY", "CHANGE_THIS_IN_PRODUCTION")  # Set in Railway!
 
-# Allowed origins for CORS (restrict to Make.com)
+# Allowed origins for CORS (Make.com + Retool)
 ALLOWED_ORIGINS = [
     "https://hook.us1.make.com",
     "https://hook.eu1.make.com",
@@ -37,6 +46,8 @@ ALLOWED_ORIGINS = [
     "https://us1.make.com",
     "https://eu1.make.com",
     "https://eu2.make.com",
+    "https://retool.com",
+    "https://*.retool.com",
 ]
 
 # Rate limiting configuration
@@ -54,13 +65,13 @@ AUDIT_LOG_FILE = "./audit_log.json"
 # MIDDLEWARE & SECURITY
 # ====================
 
-# Restrict CORS to only Make.com
+# Restrict CORS to only Make.com and Retool
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,  # Only Make.com domains
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["POST", "GET"],  # Only necessary methods
-    allow_headers=["Content-Type", "X-API-Key"],  # Only necessary headers
+    allow_methods=["POST", "GET"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
 
 # Trusted host middleware (prevent host header attacks)
@@ -72,6 +83,13 @@ app.add_middleware(
 # Initialize upload directory
 upload_dir = "./uploads"
 os.makedirs(upload_dir, exist_ok=True)
+
+# Initialize database on startup
+@app.on_event("startup")
+def startup_event():
+    """Initialize database on application startup"""
+    init_database()
+    print("Database initialized!")
 
 # ====================
 # SECURITY FUNCTIONS
@@ -171,6 +189,8 @@ def cleanup_old_documents():
 
 class LoanAnalysisRequest(BaseModel):
     loan_id: str
+    borrower_email: str
+    borrower_name: Optional[str] = None
     borrower_info: Dict[str, Any]
     loan_type: Optional[str] = "conventional"
     documents: Optional[List[Dict]] = []
@@ -186,6 +206,17 @@ class LoanAnalysisResponse(BaseModel):
     suggested_actions: List[str]
     email_template: Optional[str] = None
     status: str
+
+class IncompleteLoanResponse(BaseModel):
+    loan_id: str
+    borrower_email: str
+    borrower_name: Optional[str]
+    completeness_score: float
+    missing_documents: List[str]
+    last_reminder_sent: Optional[datetime]
+    reminder_count: int
+    created_date: datetime
+    hours_since_last_reminder: Optional[float]
 
 # ====================
 # ANALYSIS FUNCTIONS
@@ -220,7 +251,7 @@ def analyze_loan_simple(loan_data):
     missing_docs = [doc for doc in required_docs if doc not in present_docs]
 
     # Calculate scores
-    completeness_score = len(present_docs) / len(required_docs)
+    completeness_score = (len(present_docs) / len(required_docs)) * 100
     risk_score = 0.3 if len(missing_docs) > 2 else 0.1
 
     # Create missing documents list
@@ -245,7 +276,7 @@ def analyze_loan_simple(loan_data):
     suggested_actions = []
     if missing_docs:
         suggested_actions.append(f"Request missing documents: {', '.join(missing_docs)}")
-    if completeness_score >= 0.8:
+    if completeness_score >= 80:
         suggested_actions.append("File appears ready for underwriting review")
 
     return {
@@ -255,6 +286,7 @@ def analyze_loan_simple(loan_data):
         'completeness_score': completeness_score,
         'risk_score': risk_score,
         'missing_documents': missing_documents,
+        'missing_docs_list': missing_docs,  # For database storage
         'red_flags': red_flags,
         'suggested_actions': suggested_actions,
         'email_template': 'missing_documents' if missing_docs else 'ready_for_underwriting',
@@ -269,12 +301,22 @@ def analyze_loan_simple(loan_data):
 async def root():
     """Health check endpoint (PUBLIC - no auth required)"""
     return {
-        "message": "Loan Processor RAG API (SECURED)",
+        "message": "Loan Processor RAG API (SECURED with PostgreSQL)",
         "status": "running",
         "timestamp": datetime.now().isoformat(),
-        "version": "2.0.0",
+        "version": "3.0.0",
         "security": "API Key Required",
-        "endpoints": ["/upload-documents", "/analyze-loan", "/generate-email", "/stats"]
+        "database": "PostgreSQL",
+        "endpoints": [
+            "/upload-documents",
+            "/analyze-loan",
+            "/generate-email",
+            "/stats",
+            "/loans",
+            "/loans/{loan_id}",
+            "/incomplete-loans",
+            "/update-reminder"
+        ]
     }
 
 @app.post("/upload-documents")
@@ -282,7 +324,9 @@ async def upload_documents(
     request: Request,
     files: List[UploadFile] = File(...),
     loan_id: str = Form(...),
-    api_key: str = Header(None, alias="X-API-Key")
+    borrower_email: str = Form(...),
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
 ):
     """Upload loan documents (SECURED)"""
     # Security checks
@@ -305,11 +349,37 @@ async def upload_documents(
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
+            file_size = os.path.getsize(file_path)
+
+            # Add to database
+            document = Document(
+                loan_id=safe_loan_id,
+                filename=safe_filename,
+                file_path=file_path,
+                file_size=file_size
+            )
+            db.add(document)
+
             uploaded_files.append({
                 "filename": safe_filename,
                 "file_path": file_path,
-                "size": os.path.getsize(file_path)
+                "size": file_size
             })
+
+        # Update or create loan record
+        loan = db.query(Loan).filter(Loan.loan_id == safe_loan_id).first()
+        if not loan:
+            loan = Loan(
+                loan_id=safe_loan_id,
+                borrower_email=borrower_email,
+                document_count=len(uploaded_files)
+            )
+            db.add(loan)
+        else:
+            loan.document_count = db.query(Document).filter(Document.loan_id == safe_loan_id).count()
+            loan.last_updated = datetime.utcnow()
+
+        db.commit()
 
         # Audit log
         audit_log("DATA_ACCESS", "UPLOAD", {
@@ -326,6 +396,7 @@ async def upload_documents(
         }
 
     except Exception as e:
+        db.rollback()
         audit_log("ERROR", "UPLOAD_FAILED", {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
@@ -333,7 +404,8 @@ async def upload_documents(
 async def analyze_loan(
     request: Request,
     loan_request: LoanAnalysisRequest,
-    api_key: str = Header(None, alias="X-API-Key")
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
 ):
     """Main loan analysis endpoint (SECURED)"""
     # Security checks
@@ -346,17 +418,12 @@ async def analyze_loan(
 
         # Check for uploaded files if documents not provided
         if not loan_request.documents:
-            loan_dir = os.path.join(upload_dir, safe_loan_id)
-            if os.path.exists(loan_dir):
-                uploaded_files = []
-                for filename in os.listdir(loan_dir):
-                    if not filename.startswith('.'):
-                        file_path = os.path.join(loan_dir, filename)
-                        uploaded_files.append({
-                            "filename": filename,
-                            "file_path": file_path
-                        })
-                loan_request.documents = uploaded_files
+            # Get from database
+            db_documents = db.query(Document).filter(Document.loan_id == safe_loan_id).all()
+            loan_request.documents = [
+                {"filename": doc.filename, "file_path": doc.file_path}
+                for doc in db_documents
+            ]
 
         # Perform analysis
         loan_data = {
@@ -367,6 +434,27 @@ async def analyze_loan(
         }
 
         analysis_result = analyze_loan_simple(loan_data)
+
+        # Update loan in database
+        loan = db.query(Loan).filter(Loan.loan_id == safe_loan_id).first()
+        if not loan:
+            loan = Loan(
+                loan_id=safe_loan_id,
+                borrower_email=loan_request.borrower_email,
+                borrower_name=loan_request.borrower_name
+            )
+            db.add(loan)
+
+        # Update loan fields
+        loan.loan_type = loan_request.loan_type
+        loan.completeness_score = analysis_result['completeness_score']
+        loan.risk_score = analysis_result['risk_score']
+        loan.status = analysis_result['status']
+        loan.missing_documents = json.dumps(analysis_result['missing_docs_list'])
+        loan.document_count = len(loan_request.documents)
+        loan.last_updated = datetime.utcnow()
+
+        db.commit()
 
         # Audit log (redact PII)
         audit_log("DATA_ACCESS", "ANALYZE", {
@@ -379,8 +467,187 @@ async def analyze_loan(
         return LoanAnalysisResponse(**analysis_result)
 
     except Exception as e:
+        db.rollback()
         audit_log("ERROR", "ANALYSIS_FAILED", {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+@app.get("/loans")
+async def get_all_loans(
+    request: Request,
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """Get all loans (for Retool dashboard)"""
+    verify_api_key(api_key)
+    check_rate_limit(request)
+
+    try:
+        loans = db.query(Loan).all()
+
+        return {
+            "loans": [
+                {
+                    "loan_id": loan.loan_id,
+                    "borrower_email": loan.borrower_email,
+                    "borrower_name": loan.borrower_name,
+                    "loan_type": loan.loan_type,
+                    "status": loan.status,
+                    "completeness_score": loan.completeness_score,
+                    "risk_score": loan.risk_score,
+                    "document_count": loan.document_count,
+                    "created_date": loan.created_date.isoformat() if loan.created_date else None,
+                    "last_updated": loan.last_updated.isoformat() if loan.last_updated else None,
+                    "reminder_count": loan.reminder_count,
+                    "last_reminder_sent": loan.last_reminder_sent.isoformat() if loan.last_reminder_sent else None
+                }
+                for loan in loans
+            ],
+            "total_count": len(loans)
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch loans: {str(e)}")
+
+@app.get("/loans/{loan_id}")
+async def get_loan_details(
+    loan_id: str,
+    request: Request,
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """Get detailed loan information including documents"""
+    verify_api_key(api_key)
+    check_rate_limit(request)
+
+    try:
+        loan = db.query(Loan).filter(Loan.loan_id == loan_id).first()
+        if not loan:
+            raise HTTPException(status_code=404, detail="Loan not found")
+
+        # Get documents
+        documents = db.query(Document).filter(Document.loan_id == loan_id).all()
+
+        return {
+            "loan": {
+                "loan_id": loan.loan_id,
+                "borrower_email": loan.borrower_email,
+                "borrower_name": loan.borrower_name,
+                "loan_type": loan.loan_type,
+                "status": loan.status,
+                "completeness_score": loan.completeness_score,
+                "risk_score": loan.risk_score,
+                "document_count": loan.document_count,
+                "missing_documents": json.loads(loan.missing_documents) if loan.missing_documents else [],
+                "created_date": loan.created_date.isoformat() if loan.created_date else None,
+                "last_updated": loan.last_updated.isoformat() if loan.last_updated else None,
+                "reminder_count": loan.reminder_count,
+                "last_reminder_sent": loan.last_reminder_sent.isoformat() if loan.last_reminder_sent else None
+            },
+            "documents": [
+                {
+                    "filename": doc.filename,
+                    "file_size": doc.file_size,
+                    "upload_date": doc.upload_date.isoformat() if doc.upload_date else None
+                }
+                for doc in documents
+            ]
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch loan details: {str(e)}")
+
+@app.get("/incomplete-loans")
+async def get_incomplete_loans(
+    request: Request,
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """Get all loans with completeness < 100% (for Make.com reminder scenario)"""
+    verify_api_key(api_key)
+    check_rate_limit(request)
+
+    try:
+        # Get loans where completeness_score < 100
+        incomplete_loans = db.query(Loan).filter(Loan.completeness_score < 100).all()
+
+        results = []
+        for loan in incomplete_loans:
+            # Calculate hours since last reminder
+            hours_since_last_reminder = None
+            if loan.last_reminder_sent:
+                time_diff = datetime.utcnow() - loan.last_reminder_sent
+                hours_since_last_reminder = time_diff.total_seconds() / 3600
+
+            results.append({
+                "loan_id": loan.loan_id,
+                "borrower_email": loan.borrower_email,
+                "borrower_name": loan.borrower_name,
+                "completeness_score": loan.completeness_score,
+                "missing_documents": json.loads(loan.missing_documents) if loan.missing_documents else [],
+                "last_reminder_sent": loan.last_reminder_sent.isoformat() if loan.last_reminder_sent else None,
+                "reminder_count": loan.reminder_count,
+                "created_date": loan.created_date.isoformat() if loan.created_date else None,
+                "hours_since_last_reminder": hours_since_last_reminder,
+                "hours_since_creation": (datetime.utcnow() - loan.created_date).total_seconds() / 3600 if loan.created_date else None,
+                "should_send_reminder_1": loan.reminder_count == 0 and (not loan.last_reminder_sent) and loan.created_date and (datetime.utcnow() - loan.created_date).total_seconds() >= 86400,  # 24 hours since creation
+                "should_send_reminder_2": loan.reminder_count == 1 and loan.last_reminder_sent and hours_since_last_reminder and hours_since_last_reminder >= 24  # 24 hours since last reminder
+            })
+
+        return {
+            "incomplete_loans": results,
+            "total_count": len(results)
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch incomplete loans: {str(e)}")
+
+@app.post("/update-reminder")
+async def update_reminder_status(
+    request: Request,
+    loan_id: str = Form(...),
+    borrower_email: str = Form(...),
+    files: Optional[List[UploadFile]] = File(None),
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """Update reminder status after sending a reminder email"""
+    verify_api_key(api_key)
+    check_rate_limit(request)
+
+    try:
+        loan = db.query(Loan).filter(Loan.loan_id == loan_id).first()
+        if not loan:
+            raise HTTPException(status_code=404, detail="Loan not found")
+
+        # Update reminder tracking
+        loan.last_reminder_sent = datetime.utcnow()
+        loan.reminder_count += 1
+        loan.last_updated = datetime.utcnow()
+
+        db.commit()
+
+        # Audit log
+        audit_log("REMINDER", "SENT", {
+            "loan_id": loan_id,
+            "reminder_count": loan.reminder_count,
+            "ip": request.client.host
+        })
+
+        return {
+            "loan_id": loan_id,
+            "reminder_count": loan.reminder_count,
+            "last_reminder_sent": loan.last_reminder_sent.isoformat(),
+            "success": True
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        audit_log("ERROR", "UPDATE_REMINDER_FAILED", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Failed to update reminder status: {str(e)}")
 
 @app.post("/generate-email")
 async def generate_email(
@@ -400,6 +667,23 @@ async def generate_email(
     try:
         safe_loan_id = sanitize_filename(loan_id)
 
+        # Privacy footer for GLBA compliance
+        privacy_footer = """
+─────────────────────────────────────────────────────────────────
+PRIVACY NOTICE
+
+Your personal financial information is protected with industry-leading security
+including AES-128 encryption, access controls, and comprehensive audit logging.
+We do not sell your information to third parties.
+
+This message contains confidential information intended only for the recipient.
+If you received this in error, please delete it immediately and notify us.
+
+Questions about our privacy practices? Contact privacy@yourcompany.com
+
+For our complete privacy notice, visit: [YourWebsite]/privacy
+─────────────────────────────────────────────────────────────────"""
+
         if template_type == "missing_documents" and missing_documents:
             subject = "Additional Documentation Required - Loan Application"
             body = f"""Dear {borrower_name},
@@ -413,7 +697,8 @@ Please provide these documents as soon as possible to avoid delays in processing
 If you have any questions, please don't hesitate to contact us.
 
 Best regards,
-Loan Processing Team"""
+Loan Processing Team
+{privacy_footer}"""
         else:
             subject = "Loan Application Update"
             body = f"""Dear {borrower_name},
@@ -423,7 +708,8 @@ Thank you for your loan application. We have received your documents and are cur
 We will contact you if we need any additional information.
 
 Best regards,
-Loan Processing Team"""
+Loan Processing Team
+{privacy_footer}"""
 
         # Audit log
         audit_log("DATA_ACCESS", "EMAIL_GENERATED", {
@@ -447,7 +733,8 @@ Loan Processing Team"""
 @app.get("/stats")
 async def get_system_stats(
     request: Request,
-    api_key: str = Header(None, alias="X-API-Key")
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
 ):
     """Get system statistics (SECURED)"""
     # Security checks
@@ -456,19 +743,29 @@ async def get_system_stats(
 
     try:
         # Count total loans processed
-        loan_count = 0
-        if os.path.exists(upload_dir):
-            loan_count = len([d for d in os.listdir(upload_dir) if os.path.isdir(os.path.join(upload_dir, d))])
+        loan_count = db.query(Loan).count()
+        incomplete_count = db.query(Loan).filter(Loan.completeness_score < 100).count()
+        complete_count = db.query(Loan).filter(Loan.completeness_score >= 100).count()
 
         # Clean up old documents
         deleted_count = cleanup_old_documents()
 
         return {
             "loans_processed": loan_count,
+            "incomplete_loans": incomplete_count,
+            "complete_loans": complete_count,
             "system_status": "operational",
-            "api_version": "2.0.0",
+            "api_version": "3.0.0",
+            "database": "PostgreSQL",
             "security_enabled": True,
-            "features": ["document_upload", "loan_analysis", "email_generation", "auto_cleanup"],
+            "features": [
+                "document_upload",
+                "loan_analysis",
+                "email_generation",
+                "auto_cleanup",
+                "reminder_tracking",
+                "database_tracking"
+            ],
             "documents_deleted_today": deleted_count,
             "retention_days": DOCUMENT_RETENTION_DAYS,
             "timestamp": datetime.now().isoformat()
@@ -501,9 +798,9 @@ async def get_audit_log(
         raise HTTPException(status_code=500, detail=f"Audit log retrieval failed: {str(e)}")
 
 if __name__ == "__main__":
-    print("🔒 Starting SECURED Loan Processor RAG API...")
+    print("🔒 Starting SECURED Loan Processor RAG API with PostgreSQL...")
     print("📍 Server: http://localhost:8000")
-    print("📚 Documentation: http://localhost:8000/docs")
     print("🔐 API Key Required for all protected endpoints")
-    print("⚠️  Remember to set API_KEY environment variable!")
+    print("💾 Database: PostgreSQL")
+    print("⚠️  Remember to set API_KEY and DATABASE_URL environment variables!")
     uvicorn.run(app, host="0.0.0.0", port=8000)
