@@ -775,6 +775,126 @@ async def upload_single_document(
         audit_log("ERROR", "UPLOAD_SINGLE_FAILED", {"error": error_detail})
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
+class Base64FileUpload(BaseModel):
+    filename: str
+    data: str  # base64 encoded file content
+    mime_type: Optional[str] = None
+
+class Base64UploadRequest(BaseModel):
+    loan_id: str
+    borrower_email: Optional[str] = None
+    files: List[Base64FileUpload]
+
+@app.post("/upload-documents-base64")
+async def upload_documents_base64(
+    request: Request,
+    upload_request: Base64UploadRequest,
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """Upload loan documents using base64 encoding - easier for Make.com (SECURED)"""
+    import base64
+
+    # Security checks
+    verify_api_key(api_key)
+    check_rate_limit(request)
+
+    try:
+        safe_loan_id = sanitize_filename(upload_request.loan_id)
+        loan_dir = os.path.join(upload_dir, safe_loan_id)
+        os.makedirs(loan_dir, exist_ok=True)
+
+        uploaded_files = []
+
+        for file_data in upload_request.files:
+            # Validate file type
+            file_ext = os.path.splitext(file_data.filename)[1].lower()
+            if file_ext not in ALLOWED_FILE_TYPES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File type '{file_ext}' not allowed"
+                )
+
+            # Sanitize filename
+            safe_filename = sanitize_filename(file_data.filename)
+            file_path = os.path.join(loan_dir, safe_filename)
+
+            # Decode and save file
+            try:
+                file_content = base64.b64decode(file_data.data)
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Invalid base64 data for {file_data.filename}")
+
+            with open(file_path, "wb") as f:
+                f.write(file_content)
+
+            # Check file size
+            file_size = os.path.getsize(file_path)
+            if file_size > MAX_FILE_SIZE:
+                os.remove(file_path)
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File '{file_data.filename}' exceeds size limit"
+                )
+
+            # Encrypt the file
+            encrypt_file(file_path)
+
+            # Add to database
+            document = Document(
+                loan_id=safe_loan_id,
+                filename=safe_filename,
+                file_path=file_path,
+                file_size=file_size
+            )
+            db.add(document)
+
+            uploaded_files.append({
+                "filename": safe_filename,
+                "file_path": file_path,
+                "size": file_size
+            })
+
+        # Update or create loan record
+        loan = db.query(Loan).filter(Loan.loan_id == safe_loan_id).first()
+        if not loan:
+            loan = Loan(
+                loan_id=safe_loan_id,
+                borrower_email=upload_request.borrower_email,
+                document_count=len(uploaded_files)
+            )
+            db.add(loan)
+        else:
+            loan.document_count = db.query(Document).filter(Document.loan_id == safe_loan_id).count()
+            loan.last_updated = datetime.utcnow()
+
+        db.commit()
+
+        # Audit log
+        audit_log("DATA_ACCESS", "UPLOAD_BASE64", {
+            "loan_id": safe_loan_id,
+            "file_count": len(uploaded_files),
+            "ip": request.client.host
+        })
+
+        return {
+            "success": True,
+            "loan_id": safe_loan_id,
+            "uploaded_files": uploaded_files,
+            "total_files": len(uploaded_files),
+            "upload_timestamp": datetime.now().isoformat()
+        }
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        import traceback
+        error_detail = f"{str(e)} | {traceback.format_exc()}"
+        audit_log("ERROR", "UPLOAD_BASE64_FAILED", {"error": error_detail})
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
 @app.post("/analyze-loan", response_model=LoanAnalysisResponse)
 async def analyze_loan(
     request: Request,
