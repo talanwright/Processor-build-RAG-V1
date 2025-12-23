@@ -765,9 +765,14 @@ async def upload_single_document(
             "upload_timestamp": datetime.now().isoformat()
         }
 
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
-        audit_log("ERROR", "UPLOAD_SINGLE_FAILED", {"error": str(e)})
+        import traceback
+        error_detail = f"{str(e)} | {traceback.format_exc()}"
+        audit_log("ERROR", "UPLOAD_SINGLE_FAILED", {"error": error_detail})
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 @app.post("/analyze-loan", response_model=LoanAnalysisResponse)
