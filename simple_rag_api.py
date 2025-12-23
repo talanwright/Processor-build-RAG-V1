@@ -663,11 +663,14 @@ async def upload_single_document(
     loan_id: str = Form(...),
     borrower_email: str = Form(None),
     access_password: str = Form(None),
-    api_key: str = Header(None, alias="X-API-Key")
+    api_key: str = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
 ):
-    """Upload a single loan document - for Make.com iterator (SIMPLIFIED FOR DEMO)"""
+    """Upload a single loan document - for Make.com iterator (SECURED)"""
     # Security checks
+    check_ip_whitelist(request)
     verify_api_key(api_key)
+    check_rate_limit(request)
 
     try:
         # Sanitize loan_id
@@ -680,16 +683,22 @@ async def upload_single_document(
         # Validate file type
         file_ext = os.path.splitext(file.filename)[1].lower()
         if file_ext not in ALLOWED_FILE_TYPES:
+            audit_log("SECURITY", "BLOCKED_FILE_TYPE", {
+                "filename": file.filename,
+                "file_type": file_ext,
+                "loan_id": safe_loan_id,
+                "ip": request.client.host
+            })
             raise HTTPException(
                 status_code=400,
-                detail=f"File type '{file_ext}' not allowed"
+                detail=f"File type '{file_ext}' not allowed. Allowed types: {', '.join(ALLOWED_FILE_TYPES)}"
             )
 
         # Sanitize filename
         safe_filename = sanitize_filename(file.filename)
         file_path = os.path.join(loan_dir, safe_filename)
 
-        # Save file
+        # Save file temporarily
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
@@ -697,10 +706,48 @@ async def upload_single_document(
         file_size = os.path.getsize(file_path)
         if file_size > MAX_FILE_SIZE:
             os.remove(file_path)
+            audit_log("SECURITY", "FILE_SIZE_EXCEEDED", {
+                "filename": file.filename,
+                "size_mb": round(file_size / 1024 / 1024, 2),
+                "max_size_mb": round(MAX_FILE_SIZE / 1024 / 1024, 2),
+                "loan_id": safe_loan_id,
+                "ip": request.client.host
+            })
             raise HTTPException(
                 status_code=400,
-                detail=f"File exceeds size limit"
+                detail=f"File exceeds {MAX_FILE_SIZE // 1024 // 1024}MB limit"
             )
+
+        # Encrypt the file
+        encrypt_file(file_path)
+
+        # Add to database
+        document = Document(
+            loan_id=safe_loan_id,
+            filename=safe_filename,
+            file_path=file_path,
+            file_size=file_size
+        )
+        db.add(document)
+
+        # Update or create loan record
+        loan = db.query(Loan).filter(Loan.loan_id == safe_loan_id).first()
+        if not loan:
+            loan = Loan(
+                loan_id=safe_loan_id,
+                borrower_email=borrower_email,
+                document_count=1
+            )
+            if access_password:
+                loan.access_password = access_password
+            db.add(loan)
+        else:
+            loan.document_count = db.query(Document).filter(Document.loan_id == safe_loan_id).count()
+            loan.last_updated = datetime.utcnow()
+            if access_password:
+                loan.access_password = access_password
+
+        db.commit()
 
         # Audit log
         audit_log("DATA_ACCESS", "UPLOAD_SINGLE", {
@@ -710,7 +757,6 @@ async def upload_single_document(
         })
 
         return {
-            "success": True,
             "loan_id": safe_loan_id,
             "borrower_email": borrower_email,
             "filename": safe_filename,
@@ -719,9 +765,8 @@ async def upload_single_document(
             "upload_timestamp": datetime.now().isoformat()
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
+        db.rollback()
         audit_log("ERROR", "UPLOAD_SINGLE_FAILED", {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
