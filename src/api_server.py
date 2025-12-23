@@ -79,7 +79,11 @@ async def root():
     }
 
 @app.post("/upload-documents")
-async def upload_documents(files: List[UploadFile] = File(...), loan_id: str = Form(...)):
+async def upload_documents(
+    files: List[UploadFile] = File(...),
+    loan_id: str = Form(...),
+    borrower_email: Optional[str] = Form(None)
+):
     """Upload loan documents"""
     try:
         uploaded_files = []
@@ -99,6 +103,7 @@ async def upload_documents(files: List[UploadFile] = File(...), loan_id: str = F
 
         return {
             "loan_id": loan_id,
+            "borrower_email": borrower_email,
             "uploaded_files": uploaded_files,
             "total_files": len(uploaded_files),
             "upload_timestamp": datetime.now().isoformat()
