@@ -112,6 +112,33 @@ async def upload_documents(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
+@app.post("/upload-document")
+async def upload_single_document(
+    file: UploadFile = File(...),
+    loan_id: str = Form(...),
+    borrower_email: Optional[str] = Form(None)
+):
+    """Upload a single loan document (for Make.com iterator)"""
+    try:
+        loan_dir = os.path.join(upload_dir, loan_id)
+        os.makedirs(loan_dir, exist_ok=True)
+
+        file_path = os.path.join(loan_dir, file.filename)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        return {
+            "loan_id": loan_id,
+            "borrower_email": borrower_email,
+            "filename": file.filename,
+            "file_path": file_path,
+            "size": os.path.getsize(file_path),
+            "upload_timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
 @app.post("/analyze-loan", response_model=LoanAnalysisResponse)
 async def analyze_loan(request: LoanAnalysisRequest):
     """Main loan analysis endpoint - This is what Make.com will call"""
