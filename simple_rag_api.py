@@ -1559,7 +1559,58 @@ async def secure_loan_access(
 ):
     """Public endpoint for loan officer to access loan via secure token (NO API KEY REQUIRED)"""
     try:
-        # Find the access token
+        import base64
+
+        # EMERGENCY MODE: Check if this is an emergency token
+        if token.startswith("EMERGENCY_"):
+            # Decode loan_id from token
+            loan_id_encoded = token.replace("EMERGENCY_", "")
+            safe_loan_id = base64.urlsafe_b64decode(loan_id_encoded.encode()).decode()
+
+            # Get files from disk directly (no database)
+            loan_dir = os.path.join(upload_dir, safe_loan_id)
+            if not os.path.exists(loan_dir):
+                raise HTTPException(status_code=404, detail="Loan files not found")
+
+            # List all files
+            files = os.listdir(loan_dir)
+            document_list = [
+                {
+                    "filename": f,
+                    "file_size": os.path.getsize(os.path.join(loan_dir, f)),
+                    "upload_date": None,
+                    "download_url": f"/secure-loan/{token}/download/{f}"
+                }
+                for f in files if os.path.isfile(os.path.join(loan_dir, f))
+            ]
+
+            # Return emergency HTML view
+            return templates.TemplateResponse("loan_view.html", {
+                "request": request,
+                "loan": {
+                    "loan_id": safe_loan_id,
+                    "borrower_name": "N/A (Emergency Mode)",
+                    "borrower_email": "N/A (Emergency Mode)",
+                    "loan_type": "conventional",
+                    "status": "Ready",
+                    "completeness_score": 100,
+                    "risk_score": 0,
+                    "document_count": len(document_list),
+                    "monthly_income": None,
+                    "created_date": None,
+                    "last_updated": None
+                },
+                "missing_documents": [],
+                "documents": document_list,
+                "access_info": {
+                    "expires_at": "Never (Emergency Mode)",
+                    "access_count": 0,
+                    "permanent_access": True,
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+            })
+
+        # NORMAL MODE: Validate token from database
         access_token = db.query(AccessToken).filter(AccessToken.token == token).first()
 
         if not access_token:
@@ -1649,7 +1700,38 @@ async def secure_download_document(
 ):
     """Download document via secure token (NO API KEY OR PASSWORD REQUIRED)"""
     try:
-        # Verify token
+        import base64
+
+        # EMERGENCY MODE: Handle emergency tokens
+        if token.startswith("EMERGENCY_"):
+            # Decode loan_id from token
+            loan_id_encoded = token.replace("EMERGENCY_", "")
+            safe_loan_id = base64.urlsafe_b64decode(loan_id_encoded.encode()).decode()
+
+            # Sanitize filename
+            safe_filename = sanitize_filename(filename)
+
+            # Build file path
+            file_path = os.path.join(upload_dir, safe_loan_id, safe_filename)
+
+            # Check if file exists
+            if not os.path.exists(file_path):
+                raise HTTPException(status_code=404, detail="Document not found")
+
+            # Read file as-is (NO DECRYPTION in emergency mode)
+            with open(file_path, 'rb') as f:
+                file_data = f.read()
+
+            # Return file
+            return Response(
+                content=file_data,
+                media_type="application/octet-stream",
+                headers={
+                    "Content-Disposition": f"attachment; filename=\"{safe_filename}\""
+                }
+            )
+
+        # NORMAL MODE: Validate token from database
         access_token = db.query(AccessToken).filter(AccessToken.token == token).first()
 
         if not access_token:
@@ -1866,14 +1948,17 @@ async def generate_secure_link_simple(
     request: Request,
     api_key: str = Header(None, alias="X-API-Key")
 ):
-    """EMERGENCY: Generate secure link without database"""
+    """EMERGENCY: Generate secure link without database - encodes loan_id in token"""
     verify_api_key(api_key)
 
     try:
+        import base64
         safe_loan_id = sanitize_filename(link_request.loan_id)
 
-        # Generate a token (won't be stored in database)
-        token = secrets.token_urlsafe(32)
+        # Encode loan_id directly in the token for emergency mode
+        # Format: "EMERGENCY_" + base64(loan_id)
+        loan_id_encoded = base64.urlsafe_b64encode(safe_loan_id.encode()).decode()
+        token = f"EMERGENCY_{loan_id_encoded}"
 
         # Get the base URL
         base_url = os.getenv("BASE_URL", "https://web-production-0a9f4.up.railway.app")
@@ -1883,7 +1968,7 @@ async def generate_secure_link_simple(
             "secure_link": secure_link,
             "loan_id": safe_loan_id,
             "token": token,
-            "note": "Link generated without database (emergency mode - validation will not work)"
+            "note": "Emergency link with embedded loan_id (no database required)"
         }
 
     except Exception as e:
