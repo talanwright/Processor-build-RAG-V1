@@ -1860,6 +1860,35 @@ async def analyze_loan_simple_endpoint(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
+@app.post("/generate-secure-link-simple")
+async def generate_secure_link_simple(
+    link_request: SecureLinkRequest,
+    request: Request,
+    api_key: str = Header(None, alias="X-API-Key")
+):
+    """EMERGENCY: Generate secure link without database"""
+    verify_api_key(api_key)
+
+    try:
+        safe_loan_id = sanitize_filename(link_request.loan_id)
+
+        # Generate a token (won't be stored in database)
+        token = secrets.token_urlsafe(32)
+
+        # Get the base URL
+        base_url = os.getenv("BASE_URL", "https://web-production-0a9f4.up.railway.app")
+        secure_link = f"{base_url}/secure-loan/{token}"
+
+        return {
+            "secure_link": secure_link,
+            "loan_id": safe_loan_id,
+            "token": token,
+            "note": "Link generated without database (emergency mode - validation will not work)"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Link generation failed: {str(e)}")
+
 if __name__ == "__main__":
     print("🔒 Starting SECURED Loan Processor RAG API with PostgreSQL...")
     print("📍 Server: http://localhost:8000")
