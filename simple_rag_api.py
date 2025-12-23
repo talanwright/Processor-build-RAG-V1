@@ -1750,6 +1750,54 @@ async def revoke_access_token(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to revoke token: {str(e)}")
 
+# ====================
+# EMERGENCY ENDPOINT - NO ENCRYPTION, NO DATABASE
+# ====================
+@app.post("/upload-documents-simple")
+async def upload_documents_simple(
+    request: Request,
+    files: List[UploadFile] = File(...),
+    loan_id: str = Form(...),
+    borrower_email: str = Form(None),
+    api_key: str = Header(None, alias="X-API-Key")
+):
+    """EMERGENCY: Upload files without encryption or database - for troubleshooting"""
+    # Only verify API key
+    verify_api_key(api_key)
+
+    try:
+        # Sanitize loan_id
+        safe_loan_id = sanitize_filename(loan_id)
+        uploaded_files = []
+        loan_dir = os.path.join(upload_dir, safe_loan_id)
+        os.makedirs(loan_dir, exist_ok=True)
+
+        for file in files:
+            # Sanitize filename
+            safe_filename = sanitize_filename(file.filename)
+            file_path = os.path.join(loan_dir, safe_filename)
+
+            # Save file directly - NO ENCRYPTION
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+
+            file_size = os.path.getsize(file_path)
+            uploaded_files.append({
+                "filename": safe_filename,
+                "size": file_size
+            })
+
+        return {
+            "status": "success",
+            "message": f"Uploaded {len(uploaded_files)} files for loan {safe_loan_id}",
+            "loan_id": safe_loan_id,
+            "files": uploaded_files,
+            "note": "Files saved without encryption (emergency mode)"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
 if __name__ == "__main__":
     print("🔒 Starting SECURED Loan Processor RAG API with PostgreSQL...")
     print("📍 Server: http://localhost:8000")
