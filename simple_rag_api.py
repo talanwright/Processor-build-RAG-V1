@@ -1798,6 +1798,68 @@ async def upload_documents_simple(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
+@app.post("/analyze-loan-simple")
+async def analyze_loan_simple_endpoint(
+    request: Request,
+    loan_request: LoanAnalysisRequest,
+    api_key: str = Header(None, alias="X-API-Key")
+):
+    """EMERGENCY: Analyze loan without database - reads files from disk"""
+    # Only verify API key
+    verify_api_key(api_key)
+
+    try:
+        # Sanitize loan_id
+        safe_loan_id = sanitize_filename(loan_request.loan_id)
+
+        # Get documents from disk if not provided
+        if not loan_request.documents:
+            loan_dir = os.path.join(upload_dir, safe_loan_id)
+            if os.path.exists(loan_dir):
+                # List all files in the directory
+                files = os.listdir(loan_dir)
+                loan_request.documents = [
+                    {"filename": f, "file_path": os.path.join(loan_dir, f)}
+                    for f in files if os.path.isfile(os.path.join(loan_dir, f))
+                ]
+            else:
+                loan_request.documents = []
+
+        # Perform analysis
+        loan_data = {
+            "loan_id": safe_loan_id,
+            "loan_type": loan_request.loan_type,
+            "borrower_info": loan_request.borrower_info,
+            "documents": loan_request.documents
+        }
+
+        analysis_result = analyze_loan_simple(loan_data)
+
+        # Calculate monthly income if extractor is available
+        monthly_income = None
+        if EXTRACTOR_AVAILABLE:
+            try:
+                loan_dir = os.path.join(upload_dir, safe_loan_id)
+                if os.path.exists(loan_dir):
+                    doc_list = [{"filename": doc["filename"]} for doc in loan_request.documents]
+                    income_analysis = document_extractor.analyze_documents(loan_dir, doc_list)
+                    monthly_income = income_analysis.get('total_monthly_income', 0)
+
+                    analysis_result['monthly_income'] = monthly_income
+                    analysis_result['income_breakdown'] = income_analysis.get('income_breakdown', [])
+                    if income_analysis.get('red_flags'):
+                        analysis_result['red_flags'].extend(income_analysis['red_flags'])
+            except Exception as e:
+                print(f"Income calculation failed: {e}")
+
+        return {
+            **analysis_result,
+            "note": "Analysis without database (emergency mode)"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
 if __name__ == "__main__":
     print("🔒 Starting SECURED Loan Processor RAG API with PostgreSQL...")
     print("📍 Server: http://localhost:8000")
